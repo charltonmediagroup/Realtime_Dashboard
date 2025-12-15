@@ -12,90 +12,72 @@ interface OdometerProps {
   intervalms?: number;
 }
 
-const Odometer: React.FC<OdometerProps> = ({
+const Odometer = ({
   fetchUrl = "/api/active-now",
   fontSize = "3rem",
   bold = false,
   color = "#010101",
   backgroundColor = "#ffffff00",
   intervalms = 60000,
-}) => {
-  const [targetValue, setTargetValue] = useState(0); // target from API
-  const [displayValue, setDisplayValue] = useState(0); // value shown on screen
-  const [initialFetched, setInitialFetched] = useState(false); // track first fetch
+}: OdometerProps) => {
+  const [targetValue, setTargetValue] = useState(0);
+  const [displayValue, setDisplayValue] = useState(0);
+  const [initialFetched, setInitialFetched] = useState(false);
 
-  // Fetch API periodically
   useEffect(() => {
     const fetchValue = async () => {
-      try {
-        // Add intervalms as query parameter
-        const res = await fetch(`${fetchUrl}?intervalms=${intervalms}`);
-        const data = await res.json();
-        if (data.activeUsers !== undefined) {
-          setTargetValue(data.activeUsers);
-          // For the first fetch, show value immediately
-          if (!initialFetched) {
-            setDisplayValue(data.activeUsers);
-            setInitialFetched(true);
-          }
+      const res = await fetch(`${fetchUrl}?intervalms=${intervalms}`);
+      const data = await res.json();
+
+      if (typeof data.activeUsers === "number") {
+        setTargetValue(data.activeUsers);
+        if (!initialFetched) {
+          setDisplayValue(data.activeUsers);
+          setInitialFetched(true);
         }
-      } catch (err) {
-        console.error(err);
       }
     };
 
     fetchValue();
-    const interval = setInterval(fetchValue, intervalms);
-    return () => clearInterval(interval);
+    const timer = setInterval(fetchValue, intervalms);
+    return () => clearInterval(timer);
   }, [fetchUrl, intervalms, initialFetched]);
 
-  // Animate displayValue to targetValue after first fetch
   useEffect(() => {
-    if (!initialFetched) return; // do not animate before first fetch
-    if (displayValue === targetValue) return;
+    if (!initialFetched || displayValue === targetValue) return;
 
     const step = displayValue < targetValue ? 1 : -1;
-    const interval = setInterval(() => {
-      setDisplayValue((prev) => {
-        if (prev === targetValue) {
-          clearInterval(interval);
-          return prev;
-        }
-        return prev + step;
-      });
-    }, 30); // speed of rolling
+    const timer = setInterval(() => {
+      setDisplayValue((v) => (v === targetValue ? v : v + step));
+    }, 30);
 
-    return () => clearInterval(interval);
-  }, [targetValue, displayValue, initialFetched]);
+    return () => clearInterval(timer);
+  }, [displayValue, targetValue, initialFetched]);
 
-  // Prepare string with padding
-  const str = displayValue.toString();
-  const maxLen = Math.max(str.length, targetValue.toString().length);
-  const paddedStr = str.padStart(maxLen, "0");
+  const padded = displayValue
+    .toString()
+    .padStart(targetValue.toString().length, "0");
 
   return (
     <div
       style={{
         display: "flex",
-        justifyContent: "center",
         fontSize,
         fontWeight: bold ? "bold" : "normal",
         color,
-        backgroundColor: backgroundColor,
+        backgroundColor,
         lineHeight: 1,
       }}
     >
-      {paddedStr.split("").map((digit, i) => (
+      {padded.split("").map((digit, i) => (
         <span
           key={i}
           style={{
-            display: "inline-flex",
-            alignItems: "flex-start",
-            justifyContent: "center",
+            position: "relative",
             width: "1ch",
             height: fontSize,
             overflow: "hidden",
-            position: "relative",
+            display: "inline-block",
           }}
         >
           <AnimatePresence initial={false}>
@@ -104,8 +86,7 @@ const Odometer: React.FC<OdometerProps> = ({
               initial={{ y: "100%", opacity: 0 }}
               animate={{ y: "0%", opacity: 1 }}
               exit={{ y: "-100%", opacity: 0 }}
-              transition={{ duration: initialFetched ? 0.15 : 0, ease: "easeInOut" }}
-              style={{ position: "absolute", top: 0, left: 0, right: 0 }}
+              transition={{ duration: 0.15 }}
             >
               {digit}
             </motion.span>
