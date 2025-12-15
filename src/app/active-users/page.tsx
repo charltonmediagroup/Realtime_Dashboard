@@ -6,7 +6,7 @@ interface SearchParams {
   fontSize?: string;
   bold?: string;
   color?: string;
-  BackgroundColor?: string;
+  backgroundColor?: string;
   intervalms?: string;
 }
 
@@ -20,13 +20,15 @@ const RealtimeActive = async ({ searchParams }: Props) => {
   const fontSize = params.fontSize || "3rem";
   const bold = params.bold === "true";
   const color = params.color || "#010101";
-  const backgroundColor = params.BackgroundColor || "#ffffff00";
+  const backgroundColor = params.backgroundColor || "#ffffff00";
   const intervalms = params.intervalms
     ? Number(params.intervalms)
     : Number(process.env.ACTIVE_USERS_CACHE_MS) || 60000;
 
   return (
-    <div className="bg-transparent min-h-screen flex items-center justify-center">
+    <div
+        style={{ backgroundColor }}
+        className="bg-transparent min-h-screen flex items-center justify-center">
       <Odometer
         fetchUrl="/api/active-now"
         fontSize={fontSize}
