@@ -136,7 +136,7 @@ export default function AllStatsPage() {
         <p>No data available.</p>
       ) : (
         <>
-          <p className="text-3xl font-bold m-4 capitalize">Active Users</p>
+          <p className="text-3xl font-bold m-4 capitalize">Websites Users</p>
 
           {/* Totals */}
           <div className="flex flex-wrap justify-between w-full px-8 gap-4">
@@ -196,8 +196,8 @@ export default function AllStatsPage() {
 function Metric({ label, value }: { label: string; value: number | null }) {
   return (
     <div className="flex-1 text-center p-2">
-      <div className="text-4xl font-bold">{value?.toLocaleString() ?? "—"}</div>
-      <div className="text-md text-gray-600">{label}</div>
+      <div className="text-2xl font-bold">{value?.toLocaleString() ?? "—"}</div>
+      <div className="text-sm text-gray-600">{label}</div>
     </div>
   );
 }
@@ -209,8 +209,8 @@ const th: React.CSSProperties = {
 };
 
 const td: React.CSSProperties = {
-  padding: "8px",
+  padding: "1px",
   borderBottom: "1px solid #cccccc43",
-  fontSize: "1.4rem",
+  fontSize: "1rem",
 };
 

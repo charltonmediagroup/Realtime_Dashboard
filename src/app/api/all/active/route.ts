@@ -18,14 +18,15 @@ interface CacheEntry {
 }
 
 // Cache TTLs
-const TTL_NOW = 60_000;       // 1 min
-const TTL_TODAY = 5 * 60_000; // 5 min
-const TTL_30 = 30 * 60_000;   // 30 min
-const TTL_365 = 30 * 60_000;  // 30 min
+const TTL_NOW = 60_000;
+const TTL_TODAY = 5 * 60_000;
+const TTL_30 = 30 * 60_000;
+const TTL_365 = 30 * 60_000;
 
 let cache: CacheEntry | null = null;
 
-// --- Get all brands from env ---
+// ---------- Helpers ----------
+
 function getBrands(): string[] {
   const raw = process.env.NEXT_PUBLIC_BRAND_PROPERTIES_JSON;
   if (!raw) return [];
@@ -36,7 +37,6 @@ function getBrands(): string[] {
   }
 }
 
-// --- Get GA4 property ID from GA4_PROPERTIES_JSON ---
 function getPropertyId(brand: string): string {
   const fallback = process.env.GA4_PROPERTY_ID;
   const raw = process.env.GA4_PROPERTIES_JSON;
@@ -52,28 +52,39 @@ function getPropertyId(brand: string): string {
   }
 }
 
-// --- Get GA4 filter from NEXT_PUBLIC_BRAND_PROPERTIES_JSON (optional) ---
 function getGA4Filter(brand: string) {
   const raw = process.env.NEXT_PUBLIC_BRAND_PROPERTIES_JSON;
   if (!raw) return undefined;
 
   try {
-    const map = JSON.parse(raw) as Record<string, { name: string; ga4_filter?: any }>;
+    const map = JSON.parse(raw) as Record<string, { ga4_filter?: any }>;
     return map[brand]?.ga4_filter;
   } catch {
     return undefined;
   }
 }
 
-// --- Check cache freshness ---
 function isFresh(timestamp: number, ttl: number) {
   return Date.now() - timestamp < ttl;
 }
 
+function logValue(
+  brand: string,
+  label: string,
+  value: number,
+  fromCache: boolean
+) {
+  console.log(
+    `[GA4] ${label} for ${brand}: ${value} ${fromCache ? "(cache)" : "(fetched)"}`
+  );
+}
+
+// ---------- Handler ----------
+
 export async function GET() {
   const client = getGAClient();
   const brands = getBrands();
-  const now = Date.now();
+  const nowTs = Date.now();
 
   if (!cache) {
     cache = {
@@ -86,24 +97,18 @@ export async function GET() {
 
   await Promise.all(
     brands.map(async (brand) => {
-      if (!cache!.data[brand]) {
-        cache!.data[brand] = { now: 0, today: 0, "30": 0, "365": 0 };
-      }
-
+      cache!.data[brand] ??= { now: 0, today: 0, "30": 0, "365": 0 };
       const brandData = cache!.data[brand];
       const filter = getGA4Filter(brand);
 
-      // --- Helper to fetch GA4 report (with optional date range) ---
-      async function fetchReport(dateRange?: { startDate: string; endDate: string }) {
-        const args: any = {
-          property: `properties/${getPropertyId(brand)}`,
-          metrics: [{ name: "activeUsers" }],
-        };
-        if (dateRange) args.dateRanges = [dateRange];
-        if (filter && dateRange) args.dimensionFilter = { filter };
-
+      async function fetchReport(dateRange: { startDate: string; endDate: string }) {
         try {
-          const [res] = await client.runReport(args);
+          const [res] = await client.runReport({
+            property: `properties/${getPropertyId(brand)}`,
+            dateRanges: [dateRange],
+            metrics: [{ name: "activeUsers" }],
+            ...(filter ? { dimensionFilter: { filter } } : {}),
+          });
           return Number(res.rows?.[0]?.metricValues?.[0]?.value ?? 0);
         } catch (err) {
           console.error(`[GA4] Fetch failed for ${brand}`, err);
@@ -111,58 +116,67 @@ export async function GET() {
         }
       }
 
-      // --- Active TODAY ---
-      if (!isFresh(cache!.timestamps.today, TTL_TODAY)) {
+      // ---------- TODAY ----------
+      const todayFromCache = isFresh(cache!.timestamps.today, TTL_TODAY);
+      if (!todayFromCache) {
         brandData.today = await fetchReport({ startDate: "today", endDate: "today" });
-        console.log(`[GA4] ACTIVE TODAY for ${brand}: ${brandData.today}`);
       }
+      logValue(brand, "ACTIVE TODAY", brandData.today, todayFromCache);
 
-      // --- Active NOW ---
-      if (!isFresh(cache!.timestamps.now, TTL_NOW)) {
+      // ---------- NOW ----------
+      const nowFromCache = isFresh(cache!.timestamps.now, TTL_NOW);
+      if (!nowFromCache) {
         if (filter) {
-          // Approximate active now using fraction of the day
-          const intervalsPerDay = 48;
-          brandData.now = Math.round(brandData.today / intervalsPerDay);
-          console.log(`[GA4] ACTIVE NOW (approx) for ${brand}: ${brandData.now}`);
+          // Approximate: TODAY ÷ 48 (30-min windows)
+          brandData.now = Math.max(1, Math.round(brandData.today / 48));
         } else {
-          // Realtime API
           try {
             const [res] = await client.runRealtimeReport({
               property: `properties/${getPropertyId(brand)}`,
               metrics: [{ name: "activeUsers" }],
             });
             brandData.now = Number(res.rows?.[0]?.metricValues?.[0]?.value ?? 0);
-            console.log(`[GA4] ACTIVE NOW for ${brand}: ${brandData.now}`);
           } catch {
             brandData.now = 0;
           }
         }
       }
+      logValue(
+        brand,
+        filter ? "ACTIVE NOW (approx)" : "ACTIVE NOW",
+        brandData.now,
+        nowFromCache
+      );
 
-      // --- Active LAST 30 DAYS ---
-      if (!isFresh(cache!.timestamps["30"], TTL_30)) {
-        brandData["30"] = await fetchReport({ startDate: "30daysAgo", endDate: "today" });
-        console.log(`[GA4] ACTIVE 30 DAYS for ${brand}: ${brandData["30"]}`);
+      // ---------- 30 DAYS ----------
+      const d30FromCache = isFresh(cache!.timestamps["30"], TTL_30);
+      if (!d30FromCache) {
+        brandData["30"] = await fetchReport({
+          startDate: "30daysAgo",
+          endDate: "today",
+        });
       }
+      logValue(brand, "ACTIVE 30 DAYS", brandData["30"], d30FromCache);
 
-      // --- Active LAST 365 DAYS ---
-      if (!isFresh(cache!.timestamps["365"], TTL_365)) {
-        brandData["365"] = await fetchReport({ startDate: "365daysAgo", endDate: "today" });
-        console.log(`[GA4] ACTIVE 365 DAYS for ${brand}: ${brandData["365"]}`);
+      // ---------- 365 DAYS ----------
+      const d365FromCache = isFresh(cache!.timestamps["365"], TTL_365);
+      if (!d365FromCache) {
+        brandData["365"] = await fetchReport({
+          startDate: "365daysAgo",
+          endDate: "today",
+        });
       }
+      logValue(brand, "ACTIVE 365 DAYS", brandData["365"], d365FromCache);
 
       results[brand] = brandData;
     })
   );
 
-  // Update timestamps
-  const updateTimestamp = (key: keyof CacheEntry["timestamps"]) =>
-    (cache!.timestamps[key] = now);
-
-  if (!isFresh(cache!.timestamps.now, TTL_NOW)) updateTimestamp("now");
-  if (!isFresh(cache!.timestamps.today, TTL_TODAY)) updateTimestamp("today");
-  if (!isFresh(cache!.timestamps["30"], TTL_30)) updateTimestamp("30");
-  if (!isFresh(cache!.timestamps["365"], TTL_365)) updateTimestamp("365");
+  // Update timestamps (only once)
+  if (!isFresh(cache.timestamps.now, TTL_NOW)) cache.timestamps.now = nowTs;
+  if (!isFresh(cache.timestamps.today, TTL_TODAY)) cache.timestamps.today = nowTs;
+  if (!isFresh(cache.timestamps["30"], TTL_30)) cache.timestamps["30"] = nowTs;
+  if (!isFresh(cache.timestamps["365"], TTL_365)) cache.timestamps["365"] = nowTs;
 
   return Response.json({ data: results });
 }

@@ -1,0 +1,6 @@
+{
+    "ga4":{"agri":"411999856","apb":"365552493","at":"328358832","awards":"484508290","cmg":"438324714","drinks":"501110936","esgb":"340402746","fmcg":"354775865","food":"506801878","gm":"340454161","invest":"354743783","ma":"354786082","mir":"475107095","maritime":"411998173","middle-east":"411532067","newsflash":"474220083","rea":"344151632","tdm":"396634603"},
+     "properties":{
+        "awards":{"name":"Awards Info"},"cmg":{"name":"Charlton Media"},"drinks":{"name":"Drinks Asia"},"esgb":{"name":"ESGBusiness"},"fmcg":{"name":"FMCG Asia"},"food":{"name":"Food Asia"},"gm":{"name":"Gov Media"},"invest":{"name":"Investment Asia"},"ma":{"name":"Manufacturing Asia"},"mir":{"name":"Marine & Industrial Report"},"maritime":{"name":"Maritime World"},"middle-east":{"name":"Middle East Business"},"newsflash":{"name":"NewsFlash Asia"},"rea":{"name":"Real Estate Asia"},"agri":{"name":"Agriculture Info"},"apb":{"name":"APB News"},"tdm":{"name":"Travel Daily Media"}
+     }
+}
