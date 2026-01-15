@@ -1,0 +1,103 @@
+{
+    "sbr": {
+        "name": "Singapore Business Review"
+    },
+    "hkb": {
+        "name": "Hongkong Business Review"
+    },
+    "abf": {
+        "name": "Asian Banking and Finance"
+    },
+    "abr": {
+        "name": "Asian Business Review",
+        "ga4_filter": {
+            "fieldName": "hostName",
+            "stringFilter": {
+                "matchType": "EXACT",
+                "value": "asianbusinessreview.com"
+            }
+        }
+    },
+    "ia": {
+        "name": "Insurance Asia"
+    },
+    "ra": {
+        "name": "Retail Asia"
+    },
+    "ap": {
+        "name": "Asian Power"
+    },
+    "hca": {
+        "name": "Healthcare Asia"
+    },
+    "qsr": {
+        "name": "QSR Media",
+        "group": "qsr_media_group"
+    },
+    "qsr-asia": {
+        "name": "QSR Asia",
+        "group": "qsr_media_group"
+    },
+    "qsr-aus": {
+        "name": "QSR Australia",
+        "group": "qsr_media_group"
+    },
+    "qsr-uk": {
+        "name": "QSR UK",
+        "group": "qsr_media_group"
+    },
+    "agri": {
+        "name": "Agribusiness World"
+    },
+    "apb": {
+        "name": "APB+"
+    },
+    "at": {
+        "name": "Asian Telecom"
+    },
+    "awards": {
+        "name": "Awards Info"
+    },
+    "cmg": {
+        "name": "Charlton Media"
+    },
+    "drinks": {
+        "name": "Drinks Asia"
+    },
+    "esgb": {
+        "name": "ESGBusiness"
+    },
+    "fmcg": {
+        "name": "FMCG Asia"
+    },
+    "food": {
+        "name": "Food Asia"
+    },
+    "gm": {
+        "name": "Gov Media"
+    },
+    "invest": {
+        "name": "Investment Asia"
+    },
+    "ma": {
+        "name": "Manufacturing Asia"
+    },
+    "mir": {
+        "name": "Marine & Industrial Report"
+    },
+    "maritime": {
+        "name": "Maritime World"
+    },
+    "middle-east": {
+        "name": "Middle East Business"
+    },
+    "newsflash": {
+        "name": "NewsFlash Asia"
+    },
+    "rea": {
+        "name": "Real Estate Asia"
+    },
+    "tdm": {
+        "name": "Travel Daily Media"
+    }
+}

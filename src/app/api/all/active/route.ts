@@ -1,4 +1,6 @@
 import { getGAClient } from "@/lib/ga4";
+import BRAND_PROPERTIES_RAW from "@/data/brand_properties.json";
+import GA4_PROPERTIES from "@/data/ga4_properties.json";
 
 interface BrandStats {
   now: number;
@@ -17,6 +19,17 @@ interface CacheEntry {
   };
 }
 
+// Define proper type for brand properties
+interface BrandProperty {
+  name: string;
+  ga4_filter?: any;
+}
+
+const BRAND_PROPERTIES: Record<string, BrandProperty> = BRAND_PROPERTIES_RAW as Record<
+  string,
+  BrandProperty
+>;
+
 // Cache TTLs
 const TTL_NOW = 60_000;
 const TTL_TODAY = 5 * 60_000;
@@ -28,52 +41,25 @@ let cache: CacheEntry | null = null;
 // ---------- Helpers ----------
 
 function getBrands(): string[] {
-  const raw = process.env.NEXT_PUBLIC_BRAND_PROPERTIES_JSON;
-  if (!raw) return [];
-  try {
-    return Object.keys(JSON.parse(raw));
-  } catch {
-    return [];
-  }
+  return Object.keys(BRAND_PROPERTIES);
 }
 
 function getPropertyId(brand: string): string {
   const fallback = process.env.GA4_PROPERTY_ID;
-  const raw = process.env.GA4_PROPERTIES_JSON;
-  if (!fallback) throw new Error("GA4_PROPERTY_ID missing");
+  if (!fallback) throw new Error("GA4_PROPERTY_ID is not defined");
 
-  if (!raw) return fallback;
-
-  try {
-    const map = JSON.parse(raw) as Record<string, string>;
-    return map[brand] ?? fallback;
-  } catch {
-    return fallback;
-  }
+  return (GA4_PROPERTIES as Record<string, string>)[brand] ?? fallback;
 }
 
 function getGA4Filter(brand: string) {
-  const raw = process.env.NEXT_PUBLIC_BRAND_PROPERTIES_JSON;
-  if (!raw) return undefined;
-
-  try {
-    const map = JSON.parse(raw) as Record<string, { ga4_filter?: any }>;
-    return map[brand]?.ga4_filter;
-  } catch {
-    return undefined;
-  }
+  return BRAND_PROPERTIES[brand]?.ga4_filter;
 }
 
 function isFresh(timestamp: number, ttl: number) {
   return Date.now() - timestamp < ttl;
 }
 
-function logValue(
-  brand: string,
-  label: string,
-  value: number,
-  fromCache: boolean
-) {
+function logValue(brand: string, label: string, value: number, fromCache: boolean) {
   console.log(
     `[GA4] ${label} for ${brand}: ${value} ${fromCache ? "(cache)" : "(fetched)"}`
   );
@@ -151,20 +137,14 @@ export async function GET() {
       // ---------- 30 DAYS ----------
       const d30FromCache = isFresh(cache!.timestamps["30"], TTL_30);
       if (!d30FromCache) {
-        brandData["30"] = await fetchReport({
-          startDate: "30daysAgo",
-          endDate: "today",
-        });
+        brandData["30"] = await fetchReport({ startDate: "30daysAgo", endDate: "today" });
       }
       logValue(brand, "ACTIVE 30 DAYS", brandData["30"], d30FromCache);
 
       // ---------- 365 DAYS ----------
       const d365FromCache = isFresh(cache!.timestamps["365"], TTL_365);
       if (!d365FromCache) {
-        brandData["365"] = await fetchReport({
-          startDate: "365daysAgo",
-          endDate: "today",
-        });
+        brandData["365"] = await fetchReport({ startDate: "365daysAgo", endDate: "today" });
       }
       logValue(brand, "ACTIVE 365 DAYS", brandData["365"], d365FromCache);
 

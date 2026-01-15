@@ -1,7 +1,8 @@
 "use client";
 
-import { div } from "framer-motion/client";
 import React, { useEffect, useState } from "react";
+import BRAND_PROPERTIES_RAW from "@/data/brand_properties.json";
+import GROUPS_RAW from "@/data/groups.json";
 
 type BrandStats = {
   now: number | null;
@@ -11,38 +12,80 @@ type BrandStats = {
 };
 
 type BrandRow = {
-  brand: string;
+  brand: string;          // brand code or group code when grouped
   stats: BrandStats;
+  group?: string;         // key of group in GROUPS
 };
+
+interface BrandInfo {
+  name: string;
+  ga4_filter?: any;
+  group?: string;
+  image?: string;
+}
+
+interface BrandProperties {
+  [key: string]: BrandInfo;
+}
+
+interface GroupInfo {
+  name: string;
+  main: string;
+}
+
+const BRAND_PROPERTIES: BrandProperties = BRAND_PROPERTIES_RAW;
+const GROUPS: Record<string, GroupInfo> = GROUPS_RAW;
 
 const API_BASE = process.env.NEXT_PUBLIC_SITE_URL ?? "";
 
-// Parse brand properties from env
-const BRAND_PROPERTIES: Record<string, { name: string }> = (() => {
-  try {
-    return JSON.parse(process.env.NEXT_PUBLIC_BRAND_PROPERTIES_JSON ?? "{}");
-  } catch {
-    return {};
-  }
-})();
+// -------------------- Helpers --------------------
 
 // Sorting parameters
 function getSortParams(): { sortBy: keyof BrandStats | "name"; sortAsc: boolean } {
-  if (typeof window === "undefined") return { sortBy: "name", sortAsc: true };
+  if (typeof window === "undefined") return { sortBy: "365", sortAsc: false };
   const params = new URLSearchParams(window.location.search);
-  const sort = (params.get("sort") as keyof BrandStats | "name" | null) ?? "name";
-  const order = (params.get("order") ?? "asc").toLowerCase();
-  return { sortBy: sort, sortAsc: order === "asc" };
+  const rawSort = params.get("sort");
+  const order = (params.get("order") ?? "desc").toLowerCase();
+  const isStatKey = rawSort !== null && ["now", "today", "30", "365"].includes(rawSort);
+  const sortBy: keyof BrandStats | "name" = rawSort === "name" ? "name" : isStatKey ? (rawSort as keyof BrandStats) : "365";
+  return { sortBy, sortAsc: order === "asc" };
 }
 
-// Determine table mode
+// Table mode (desktop vs mobile)
 function getTableMode(): boolean {
   if (typeof window === "undefined") return true;
   const params = new URLSearchParams(window.location.search);
   const tableParam = params.get("table");
-  const isSmallScreen = window.innerWidth < 768; // Mobile breakpoint
+  const isSmallScreen = window.innerWidth < 768;
   return tableParam !== "0" && tableParam !== "false" && !isSmallScreen;
 }
+
+// Get the main brand code for a group
+function getBrandMain(brandCode: string): string {
+  const groupKey = BRAND_PROPERTIES[brandCode]?.group;
+  if (groupKey) return GROUPS[groupKey]?.main ?? brandCode;
+  return brandCode;
+}
+
+// Get brand display name (uses main if needed)
+function getBrandName(brandCode: string): string {
+  const brand = BRAND_PROPERTIES[brandCode];
+  if (brand?.name) return brand.name;
+
+  const main = getBrandMain(brandCode);
+  return BRAND_PROPERTIES[main]?.name ?? brandCode.toUpperCase();
+}
+
+// Get any brand field (image, ga4_filter, etc.) with fallback to main
+function getBrandField<T extends keyof BrandInfo>(brandCode: string, field: T): BrandInfo[T] | undefined {
+  const brand = BRAND_PROPERTIES[brandCode];
+  if (brand?.[field] !== undefined) return brand[field];
+
+  const main = getBrandMain(brandCode);
+  return BRAND_PROPERTIES[main]?.[field];
+}
+
+// -------------------- Component --------------------
 
 export default function AllStatsPage() {
   const [rows, setRows] = useState<BrandRow[]>([]);
@@ -50,6 +93,8 @@ export default function AllStatsPage() {
   const [tableMode, setTableMode] = useState(getTableMode());
 
   const { sortBy, sortAsc } = getSortParams();
+  const params = new URLSearchParams(typeof window !== "undefined" ? window.location.search : "");
+  const grouped = params.get("grouped") === "true";
 
   async function fetchAllStats() {
     try {
@@ -57,19 +102,47 @@ export default function AllStatsPage() {
       if (!res.ok) return;
 
       const data = await res.json();
-      const newRows: BrandRow[] = [];
+      let newRows: BrandRow[] = [];
 
-      for (const brand of Object.keys(data.data)) {
-        const stats = data.data[brand];
+      // Create rows
+      for (const brandCode of Object.keys(data.data)) {
+        const stats = data.data[brandCode];
+        const groupKey = BRAND_PROPERTIES[brandCode]?.group;
+
         newRows.push({
-          brand,
+          brand: brandCode,
           stats: {
-            now: stats.now ?? null,
-            today: stats.today ?? null,
-            "30": stats["30"] ?? null,
-            "365": stats["365"] ?? null,
+            now: stats.now ?? 0,
+            today: stats.today ?? 0,
+            "30": stats["30"] ?? 0,
+            "365": stats["365"] ?? 0,
           },
+          group: groupKey,
         });
+      }
+
+      // -------------------- Grouping --------------------
+      if (grouped) {
+        const groupedRows: Record<string, BrandRow> = {};
+
+        newRows.forEach((row) => {
+          const key = row.group ?? row.brand; // use group code if exists, else brand
+
+          if (!groupedRows[key]) {
+            groupedRows[key] = {
+              brand: key,
+              stats: { now: 0, today: 0, "30": 0, "365": 0 },
+              group: row.group,
+            };
+          }
+
+          groupedRows[key].stats.now! += row.stats.now ?? 0;
+          groupedRows[key].stats.today! += row.stats.today ?? 0;
+          groupedRows[key].stats["30"]! += row.stats["30"] ?? 0;
+          groupedRows[key].stats["365"]! += row.stats["365"] ?? 0;
+        });
+
+        newRows = Object.values(groupedRows);
       }
 
       setRows(newRows);
@@ -83,12 +156,12 @@ export default function AllStatsPage() {
   useEffect(() => {
     fetchAllStats();
 
-    const intervals: number[] = [];
-    intervals.push(window.setInterval(() => fetchAllStats(), 60_000));
-    intervals.push(window.setInterval(() => fetchAllStats(), 5 * 60_000));
-    intervals.push(window.setInterval(() => fetchAllStats(), 30 * 60_000));
+    const intervals: number[] = [
+      window.setInterval(() => fetchAllStats(), 60_000),
+      window.setInterval(() => fetchAllStats(), 5 * 60_000),
+      window.setInterval(() => fetchAllStats(), 30 * 60_000),
+    ];
 
-    // Update tableMode on resize
     const handleResize = () => setTableMode(getTableMode());
     window.addEventListener("resize", handleResize);
 
@@ -98,12 +171,7 @@ export default function AllStatsPage() {
     };
   }, []);
 
-  function getBrandName(code: string) {
-    const name = BRAND_PROPERTIES[code]?.name;
-    return name ?? code.toUpperCase();
-  }
-
-  // Compute totals
+  // -------------------- Totals --------------------
   const totals: BrandStats = rows.reduce(
     (acc, row) => {
       acc.now = (acc.now ?? 0) + (row.stats.now ?? 0);
@@ -115,11 +183,11 @@ export default function AllStatsPage() {
     { now: 0, today: 0, "30": 0, "365": 0 }
   );
 
-  // Sort rows
+  // -------------------- Sorting --------------------
   const sortedRows = [...rows].sort((a, b) => {
     if (sortBy === "name") {
-      const nameA = getBrandName(a.brand).toLowerCase();
-      const nameB = getBrandName(b.brand).toLowerCase();
+      const nameA = grouped && a.group ? GROUPS[a.group]?.name ?? getBrandName(a.brand) : getBrandName(a.brand);
+      const nameB = grouped && b.group ? GROUPS[b.group]?.name ?? getBrandName(b.brand) : getBrandName(b.brand);
       return sortAsc ? nameA.localeCompare(nameB) : nameB.localeCompare(nameA);
     } else {
       const valA = a.stats[sortBy] ?? 0;
@@ -128,6 +196,7 @@ export default function AllStatsPage() {
     }
   });
 
+  // -------------------- Render --------------------
   return (
     <div className="bg-white text-gray-800 min-h-screen flex flex-col gap-2 items-center justify-evenly px-10 py-2 w-full">
       {loading ? (
@@ -138,7 +207,6 @@ export default function AllStatsPage() {
         <>
           <p className="text-3xl font-bold m-4 capitalize">Websites Users</p>
 
-          {/* Totals */}
           <div className="flex flex-wrap justify-between w-full px-8 gap-4">
             <Metric label="Total Last 365 Days" value={totals["365"]} />
             <Metric label="Total Last 30 Days" value={totals["30"]} />
@@ -147,7 +215,6 @@ export default function AllStatsPage() {
           </div>
 
           {tableMode ? (
-            // Table Mode
             <table className="w-full border-collapse">
               <thead>
                 <tr>
@@ -159,32 +226,37 @@ export default function AllStatsPage() {
                 </tr>
               </thead>
               <tbody>
-                {sortedRows.map((row) => (
-                  <tr key={row.brand}>
-                    <td style={td}>{getBrandName(row.brand)}</td>
-                    <td style={td}>{row.stats["365"]?.toLocaleString() ?? "—"}</td>
-                    <td style={td}>{row.stats["30"]?.toLocaleString() ?? "—"}</td>
-                    <td style={td}>{row.stats.today?.toLocaleString() ?? "—"}</td>
-                    <td style={td}>{row.stats.now?.toLocaleString() ?? "—"}</td>
-                  </tr>
-                ))}
+                {sortedRows.map((row) => {
+                  const displayName = grouped && row.group ? GROUPS[row.group]?.name ?? getBrandName(row.brand) : getBrandName(row.brand);
+                  return (
+                    <tr key={row.brand}>
+                      <td style={td}>{displayName}</td>
+                      <td style={td}>{row.stats["365"]?.toLocaleString() ?? "—"}</td>
+                      <td style={td}>{row.stats["30"]?.toLocaleString() ?? "—"}</td>
+                      <td style={td}>{row.stats.today?.toLocaleString() ?? "—"}</td>
+                      <td style={td}>{row.stats.now?.toLocaleString() ?? "—"}</td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           ) : (
-            // Card / Mobile Mode
-            <div className="w-full flex flex-col items-center justify-center gap-4">
-              {sortedRows.map((row) => (
-                <div
-                  key={row.brand}
-                  className="p-4 border text-gray-600 max-w-2xl w-full flex flex-col items-center border-gray-400 rounded shadow-sm bg-gray-50"
-                >
-                  <div className="font-bold text-lg mb-2 text-gray-800">{getBrandName(row.brand)}</div>
-                  <div>Now: <span className="font-bold text-gray-800">{row.stats.now?.toLocaleString() ?? "—"}</span></div>
-                  <div>Today: <span className="font-bold text-gray-800">{row.stats.today?.toLocaleString() ?? "—"}</span></div>
-                  <div>Last 30 Days: <span className="font-bold text-gray-800">{row.stats["30"]?.toLocaleString() ?? "—"}</span></div>
-                  <div>Last 365 Days: <span className="font-bold text-gray-800">{row.stats["365"]?.toLocaleString() ?? "—"}</span></div>
-                </div>
-              ))}
+            <div className="w-full grid gap-2 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-6">
+              {sortedRows.map((row) => {
+                const displayName = grouped && row.group ? GROUPS[row.group]?.name ?? getBrandName(row.brand) : getBrandName(row.brand);
+                return (
+                  <div
+                    key={row.brand}
+                    className="p-2 border text-gray-600 max-w-l w-full flex flex-col border-gray-400 rounded shadow-sm bg-gray-50"
+                  >
+                    <div className="font-bold text-lg mb-2 text-gray-800">{displayName}</div>
+                    <div>Now: <span className="font-bold text-gray-800">{row.stats.now?.toLocaleString() ?? "—"}</span></div>
+                    <div>Today: <span className="font-bold text-gray-800">{row.stats.today?.toLocaleString() ?? "—"}</span></div>
+                    <div>Last 30 Days: <span className="font-bold text-gray-800">{row.stats["30"]?.toLocaleString() ?? "—"}</span></div>
+                    <div>Last 365 Days: <span className="font-bold text-gray-800">{row.stats["365"]?.toLocaleString() ?? "—"}</span></div>
+                  </div>
+                );
+              })}
             </div>
           )}
         </>
@@ -193,6 +265,7 @@ export default function AllStatsPage() {
   );
 }
 
+// -------------------- Metric --------------------
 function Metric({ label, value }: { label: string; value: number | null }) {
   return (
     <div className="flex-1 text-center p-2">
@@ -202,6 +275,7 @@ function Metric({ label, value }: { label: string; value: number | null }) {
   );
 }
 
+// -------------------- Styles --------------------
 const th: React.CSSProperties = {
   borderBottom: "1px solid #cccccc43",
   textAlign: "left",
@@ -213,4 +287,3 @@ const td: React.CSSProperties = {
   borderBottom: "1px solid #cccccc43",
   fontSize: "1rem",
 };
-

@@ -1,5 +1,7 @@
 // app/api/active-365-days/[brand]/route.ts
 import { getGAClient } from "@/lib/ga4";
+import GA4_PROPERTIES_RAW from "@/data/ga4_properties.json";
+
 
 interface CacheEntry {
   value: number;
@@ -12,27 +14,23 @@ const cacheMap: Record<string, Record<number, CacheEntry>> = {};
 const DEFAULT_CACHE_DURATION = 60 * 60 * 1000; // 1 hour
 const MIN_INTERVAL = 60000; // 1 min
 
-function resolvePropertyId(brand: string): string {
-  const fallback = process.env.GA4_PROPERTY_ID;
-  if (!fallback) throw new Error("GA4_PROPERTY_ID is not defined");
+const GA4_PROPERTIES: Record<string, string> = GA4_PROPERTIES_RAW;
 
-  if (brand === "default") return fallback;
+const DEFAULT_PROPERTY_ID: string = process.env.GA4_PROPERTY_ID as string;
+if (!DEFAULT_PROPERTY_ID) throw new Error("GA4_PROPERTY_ID is not defined");
 
-  const raw = process.env.GA4_PROPERTIES_JSON;
-  if (!raw) return fallback;
+export function resolvePropertyId(brand: string): string {
+  if (brand === "default") return DEFAULT_PROPERTY_ID;
 
-  try {
-    const map = JSON.parse(raw) as Record<string, string>;
-    if (!map[brand]) {
-      console.warn(`[GA4] Brand "${brand}" not found. Using default property.`);
-      return fallback;
-    }
-    return map[brand];
-  } catch (err) {
-    console.error("[GA4] Failed to parse GA4_PROPERTIES_JSON", err);
-    return fallback;
+  const propertyId = GA4_PROPERTIES[brand];
+  if (!propertyId) {
+    console.error(`[GA4] Brand "${brand}" not found in GA4_PROPERTIES.json`);
+    throw new Error(`[GA4] No GA4 property ID for brand "${brand}"`);
   }
+
+  return propertyId;
 }
+
 
 export async function GET(
   req: Request,
