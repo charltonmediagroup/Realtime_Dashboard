@@ -1,6 +1,6 @@
 // app/api/active-365-days/[brand]/route.ts
 import { getGAClient } from "@/lib/ga4";
-import GA4_PROPERTIES_RAW from "@/data/ga4_properties.json";
+import GA4_PROPERTIES_RAW from "@/data/brand_ga4_properties.json";
 
 
 interface CacheEntry {
