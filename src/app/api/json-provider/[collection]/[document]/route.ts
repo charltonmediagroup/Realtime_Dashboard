@@ -2,20 +2,20 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCollection } from "@/lib/mongodb";
 
-interface CacheEntry {
-  data: any;
+interface CacheEntry<T> {
+  data: T;
   expiresAt: number; // timestamp in ms
 }
 
 // In-memory cache
-const cache: Record<string, CacheEntry> = {};
+const cache: Record<string, CacheEntry<unknown>> = {};
 
 // Cache TTL (e.g., 1 day)
 const CACHE_TTL = 24 * 60 * 60 * 1000;
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: Promise<{ collection?: string; document?: string }> }
+  { params }: { params: Promise<{ collection?: string; document?: string }> },
 ) {
   try {
     const { collection, document } = await params;
@@ -40,25 +40,35 @@ export async function GET(
 
     // Fetch from MongoDB
     const col = await getCollection(targetCollection);
-    const doc = await col.findOne({ uid: targetDocument });
-    console.log(`[MongoDB] Fetched document ${targetDocument} from collection ${targetCollection}`);
+    const doc = await col.findOne<{ uid: string; data: unknown }>({
+      uid: targetDocument,
+    });
+
+    console.log(
+      `[MongoDB] Fetched document ${targetDocument} from collection ${targetCollection}`,
+    );
 
     if (!doc) {
-      return NextResponse.json({ error: "Document not found" }, { status: 404 });
+      return NextResponse.json(
+        { error: "Document not found" },
+        { status: 404 },
+      );
     }
 
     // Update cache
+    const dataToCache = doc.data ?? doc;
+
     cache[cacheKey] = {
-      data: doc.data ?? doc,
+      data: dataToCache,
       expiresAt: now + CACHE_TTL,
     };
 
-    return NextResponse.json(cache[cacheKey].data);
+    return NextResponse.json(dataToCache);
   } catch (err) {
     console.error("Failed to fetch document:", err);
     return NextResponse.json(
       { error: "Internal Server Error", message: (err as Error).message },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
