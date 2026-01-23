@@ -9,7 +9,6 @@ if (!dbName) throw new Error("Please define MONGODB_DB in .env");
 
 // Extend global type (recommended)
 declare global {
-  // eslint-disable-next-line no-var
   var _mongoClientPromise: Promise<MongoClient> | undefined;
 }
 
