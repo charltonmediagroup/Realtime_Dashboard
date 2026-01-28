@@ -1,5 +1,6 @@
 "use client";
 
+import { color } from "framer-motion";
 import { useEffect, useRef, useState } from "react";
 
 interface TickerStripProps {
@@ -140,7 +141,7 @@ const styles = {
     overflow: "hidden",
     whiteSpace: "nowrap" as const,
     width: "100%",
-    fontSize: "26px",
+    fontSize: "clamp(1.25rem, 1.5vw, 1.75rem)",
     height: "50px",
     fontFamily: '"DIN-Bold", Arial, sans-serif',
     backgroundColor: "#FF0000",
@@ -172,5 +173,6 @@ const styles = {
   item: {
     margin: "0 120px",
     display: "inline-block",
+    color: "white",
   },
 };

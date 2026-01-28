@@ -7,6 +7,7 @@ interface ArticleTableProps {
     limit?: number;       // number of rows
     fontSize?: number;    // px
     title?: string;       // table header
+    onError?: () => void;
 }
 
 export default function TopViews({

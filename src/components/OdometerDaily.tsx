@@ -22,6 +22,7 @@ const OdometerDaily = ({
   const [value, setValue] = useState<number>(0);
 
   const fetchValue = async () => {
+    if (!fetchUrl) return;
     try {
       const res = await fetch(fetchUrl);
       const data = await res.json();
@@ -34,37 +35,37 @@ const OdometerDaily = ({
   };
 
   useEffect(() => {
-    // Fetch immediately on mount
+    // Reset value when fetchUrl or field changes (brand switched)
+    setValue(0);
+
+    // Fetch immediately
     fetchValue();
 
-    // Calculate milliseconds until next 12:00
+    // Schedule fetch at next 12:00 noon
     const now = new Date();
     const nextNoon = new Date(
       now.getFullYear(),
       now.getMonth(),
       now.getDate(),
-      12,
-      0,
-      0,
-      0
+      12, 0, 0, 0
     );
-
     if (now >= nextNoon) {
-      // If it's past noon, schedule for tomorrow
       nextNoon.setDate(nextNoon.getDate() + 1);
     }
-
     const timeToWait = nextNoon.getTime() - now.getTime();
 
-    const timer = setTimeout(() => {
+    const timeoutId = setTimeout(() => {
       fetchValue();
 
-      // Schedule daily fetch every 24 hours
-      setInterval(fetchValue, 24 * 60 * 60 * 1000);
+      // Schedule daily interval every 24h
+      const intervalId = setInterval(fetchValue, 24 * 60 * 60 * 1000);
+      // Clear interval on unmount or fetchUrl change
+      return () => clearInterval(intervalId);
     }, timeToWait);
 
-    return () => clearTimeout(timer);
-  }, []);
+    // Cleanup on unmount or fetchUrl/field change
+    return () => clearTimeout(timeoutId);
+  }, [fetchUrl, field]);
 
   return (
     <div
@@ -77,7 +78,7 @@ const OdometerDaily = ({
         lineHeight: 1,
       }}
     >
-      {value.toLocaleString()} {/* automatically adds commas for thousands */}
+      {value.toLocaleString()}
     </div>
   );
 };

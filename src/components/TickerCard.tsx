@@ -118,7 +118,7 @@ const styles = {
         display: "flex",
         alignItems: "center",
         width: "100%",
-        fontSize: "26px",
+        fontSize: "clamp(1.25rem, 1.5vw, 1.75rem)",
         color: "black",
         height: "50px",
         fontFamily: '"DIN-Bold", Arial, sans-serif',

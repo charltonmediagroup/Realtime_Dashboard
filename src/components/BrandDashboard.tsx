@@ -8,7 +8,7 @@ import OdometerDaily from "./OdometerDaily";
 import OdometerLast from "./OdometerLast";
 import VideoRotator from "./VideoRotator";
 import TopViews from "./TopViews";
-import { useRef } from "react";
+import { useState, useEffect } from "react";
 
 interface BrandDashboardProps {
   brand: string;
@@ -17,31 +17,44 @@ interface BrandDashboardProps {
   themeColor?: boolean;
 }
 
-export default function BrandDashboard({ brand, siteConfig, speed = 100, themeColor = true }: BrandDashboardProps) {
-  const dashboardRef = useRef<HTMLDivElement>(null);
+export default function BrandDashboard({
+  brand,
+  siteConfig,
+  speed = 100,
+  themeColor = true,
+}: BrandDashboardProps) {
+  const safeReplace = (url: string) => (url ? url.replace(/\/$/, "") : "");
 
-  const handleFullscreenToggle = () => {
-    if (!dashboardRef.current) return;
+  const feedUrl = siteConfig?.exclusivesUrl ?? safeReplace(siteConfig?.url) + "/news-feed.xml";
+  const exclusiveFeedUrl = siteConfig?.exclusiveFeed ?? safeReplace(siteConfig?.url) + "/exclusive-news-feed.xml";
+  const videosFeedUrl = siteConfig?.videosFeed ?? safeReplace(siteConfig?.url) + "/latest-videos.xml";
+  const articlesFeedUrl = siteConfig?.ArticlesFeed ?? safeReplace(siteConfig?.url) + "/top-read-feed.xml";
 
+  // Track component visibility
+  const [showTopViews, setShowTopViews] = useState(true);
+  const [showVideoRotator, setShowVideoRotator] = useState(true);
+
+  // Safety: hide if feeds fail
+  useEffect(() => {
+    if (!articlesFeedUrl) setShowTopViews(false);
+    if (!videosFeedUrl) setShowVideoRotator(false);
+  }, [articlesFeedUrl, videosFeedUrl]);
+
+  // Fullscreen toggle
+  const toggleFullscreen = () => {
+    const elem = document.documentElement;
     if (!document.fullscreenElement) {
-      dashboardRef.current.requestFullscreen().catch(err => {
-        console.error("Failed to enter fullscreen:", err);
-      });
+      elem.requestFullscreen().catch(err => console.error("Failed to enter fullscreen:", err));
     } else {
       document.exitFullscreen();
     }
   };
 
-  const feedUrl = siteConfig.exclusivesUrl ?? siteConfig.url.replace(/\/$/, "") + "/news-feed.xml";
-  const exclusiveFeedUrl = siteConfig.exclusiveFeed ?? siteConfig.url.replace(/\/$/, "") + "/exclusive-news-feed.xml";
-  const videosFeedUrl = siteConfig.videosFeed ?? siteConfig.url.replace(/\/$/, "") + "/latest-videos.xml";
-  const articlesFeedUrl = siteConfig.ArticlesFeed ?? siteConfig.url.replace(/\/$/, "") + "/top-read-feed.xml";
-
   return (
-    <div ref={dashboardRef} className="bg-white h-screen flex flex-col overflow-hidden">
-      {/* HEADER */}
+    <div className="bg-white h-screen flex flex-col overflow-hidden">
+      {/* ================= HEADER ================= */}
       <div className="p-2 pt-8 flex justify-between items-center gap-6 h-[120px] shrink-0">
-        {siteConfig.image && (
+        {siteConfig?.image && (
           <div className="relative h-24 w-64">
             <Image
               src={`/${siteConfig.image}`}
@@ -71,15 +84,15 @@ export default function BrandDashboard({ brand, siteConfig, speed = 100, themeCo
 
           <div className="flex flex-col items-center text-gray-900">
             <p>Active Users Now</p>
-            <OdometerLast fetchUrl={`/api/active-now/${brand}`} field="activeUsers" />
+            <OdometerLast fetchUrl={`/api/active-now/${brand}`} field="activeUsers" intervalms={10000} />
           </div>
         </div>
 
-        {/* CMG Logo → fullscreen toggle */}
+        {/* CMG Logo with fullscreen toggle */}
         <div
           className="relative h-24 w-32 cursor-pointer"
-          onClick={handleFullscreenToggle}
-          title="Toggle Fullscreen"
+          onClick={toggleFullscreen}
+          title="Click to toggle fullscreen"
         >
           <Image
             src="/logo/cmg.png"
@@ -91,32 +104,44 @@ export default function BrandDashboard({ brand, siteConfig, speed = 100, themeCo
         </div>
       </div>
 
-      {/* MAIN CONTENT */}
-      <div className="flex-1 flex items-center justify-center overflow-hidden py-8">
+      {/* ================= MAIN CONTENT ================= */}
+      <div className="flex-1 flex items-center justify-center overflow-hidden">
         <div className="w-full max-w-[1920px] flex gap-8 px-8">
-          <div className="w-[40%] flex items-center justify-center overflow-hidden">
-            <TopViews xmlUrl={articlesFeedUrl} limit={10} />
-          </div>
+          {showTopViews && (
+            <div className="w-[40%] flex items-center justify-center overflow-hidden">
+              <TopViews
+                xmlUrl={articlesFeedUrl}
+                limit={10}
+                onError={() => setShowTopViews(false)}
+              />
+            </div>
+          )}
 
-          <div className="w-[60%] flex items-center justify-center overflow-hidden">
-            <VideoRotator xmlUrl={videosFeedUrl} displayTime={30} />
-          </div>
+          {showVideoRotator && (
+            <div className="w-[60%] flex items-center justify-center overflow-hidden">
+              <VideoRotator
+                xmlUrl={videosFeedUrl}
+                displayTime={30}
+                onError={() => setShowVideoRotator(false)}
+              />
+            </div>
+          )}
         </div>
       </div>
 
-      {/* TICKERS */}
+      {/* ================= TICKERS ================= */}
       <div className="shrink-0">
         <TickerCard
           feedUrl={exclusiveFeedUrl}
           duration={4000}
           labelColor="#ff0000"
-          backgroundColor={themeColor ? siteConfig.color : "#f5f5f5"}
+          backgroundColor={themeColor ? siteConfig?.color : "#f5f5f5"}
         />
 
         <TickerStrip
           feedUrl={feedUrl}
           speed={speed}
-          backgroundColor={themeColor ? siteConfig.color : undefined}
+          backgroundColor={themeColor ? siteConfig?.color : undefined}
         />
       </div>
     </div>
