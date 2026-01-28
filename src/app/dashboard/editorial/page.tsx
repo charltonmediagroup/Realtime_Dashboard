@@ -14,11 +14,13 @@ interface BrandEntry {
   siteConfig: any;
 }
 
-export default function EditorialPage() {
+interface EditorialPageProps {
+  rotationInterval?: number; // ms
+}
+
+export default function EditorialPage({ rotationInterval = 60_000 }: EditorialPageProps) {
   const [brands, setBrands] = useState<BrandEntry[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
-
-  const ROTATION_INTERVAL_MS = 60_000;
 
   const rotationTimer = useRef<NodeJS.Timeout | null>(null);
   const isVisible = useRef(true);
@@ -71,7 +73,7 @@ export default function EditorialPage() {
 
       rotationTimer.current = setInterval(() => {
         setCurrentIndex((prev) => (prev + 1) % brands.length);
-      }, ROTATION_INTERVAL_MS);
+      }, rotationInterval);
     };
 
     const stopRotation = () => {
@@ -101,7 +103,7 @@ export default function EditorialPage() {
       stopRotation();
       document.removeEventListener("visibilitychange", handleVisibility);
     };
-  }, [brands]);
+  }, [brands, rotationInterval]);
 
   /* ---------------- LOADING STATE ---------------- */
   if (!brands.length) {
@@ -115,7 +117,7 @@ export default function EditorialPage() {
   const currentBrand = brands[currentIndex];
 
   return (
-    <div className="h-screen w-screen overflow-hidden">
+    <div className="h-screen w-screen overflow-y-auto md:overflow-hidden">
       <BrandDashboard
         key={currentBrand.brand} // 👈 forces clean unmount
         brand={currentBrand.brand}

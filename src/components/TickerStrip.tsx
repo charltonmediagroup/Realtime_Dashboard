@@ -147,7 +147,7 @@ const styles = {
     backgroundColor: "#FF0000",
   },
   label: {
-    width: "170px",
+    width: "175px",
     fontWeight: "bold" as const,
     display: "flex",
     alignItems: "center",
@@ -171,7 +171,7 @@ const styles = {
     backgroundColor: "#FF0000",
   },
   item: {
-    margin: "0 120px",
+    margin: "0 200px",
     display: "inline-block",
     color: "white",
   },

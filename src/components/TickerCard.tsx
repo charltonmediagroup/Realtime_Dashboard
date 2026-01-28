@@ -95,7 +95,7 @@ export default function TickerCard({
         `}
             </style>
             <div style={{ ...styles.label, backgroundColor: labelColor }}>{label}</div>
-            <div style={{ ...styles.scroll, backgroundColor:"#F5F5F5" }}>
+            <div style={{ ...styles.scroll, backgroundColor:"#F2F2F2" }}>
                 {headlines.map((h, i) => (
                     <div
                         key={i}
@@ -125,7 +125,7 @@ const styles = {
         overflow: "hidden",
     },
     label: {
-        width: "170px",
+        width: "175px",
         fontWeight: 700,
         display: "flex",
         alignItems: "center",

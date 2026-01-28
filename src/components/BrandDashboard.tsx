@@ -25,90 +25,123 @@ export default function BrandDashboard({
 }: BrandDashboardProps) {
   const safeReplace = (url: string) => (url ? url.replace(/\/$/, "") : "");
 
-  const feedUrl = siteConfig?.exclusivesUrl ?? safeReplace(siteConfig?.url) + "/news-feed.xml";
-  const exclusiveFeedUrl = siteConfig?.exclusiveFeed ?? safeReplace(siteConfig?.url) + "/exclusive-news-feed.xml";
-  const videosFeedUrl = siteConfig?.videosFeed ?? safeReplace(siteConfig?.url) + "/latest-videos.xml";
-  const articlesFeedUrl = siteConfig?.ArticlesFeed ?? safeReplace(siteConfig?.url) + "/top-read-feed.xml";
+  const feedUrl =
+    siteConfig?.exclusivesUrl ??
+    safeReplace(siteConfig?.url) + "/news-feed.xml";
+  const exclusiveFeedUrl =
+    siteConfig?.exclusiveFeed ??
+    safeReplace(siteConfig?.url) + "/exclusive-news-feed.xml";
+  const videosFeedUrl =
+    siteConfig?.videosFeed ??
+    safeReplace(siteConfig?.url) + "/latest-videos.xml";
+  const articlesFeedUrl =
+    siteConfig?.ArticlesFeed ??
+    safeReplace(siteConfig?.url) + "/top-read-feed.xml";
 
-  // Track component visibility
   const [showTopViews, setShowTopViews] = useState(true);
   const [showVideoRotator, setShowVideoRotator] = useState(true);
 
-  // Safety: hide if feeds fail
   useEffect(() => {
     if (!articlesFeedUrl) setShowTopViews(false);
     if (!videosFeedUrl) setShowVideoRotator(false);
   }, [articlesFeedUrl, videosFeedUrl]);
 
-  // Fullscreen toggle
   const toggleFullscreen = () => {
-    const elem = document.documentElement;
+    const el = document.documentElement;
     if (!document.fullscreenElement) {
-      elem.requestFullscreen().catch(err => console.error("Failed to enter fullscreen:", err));
+      el.requestFullscreen().catch(() => { });
     } else {
       document.exitFullscreen();
     }
   };
 
   return (
-    <div className="bg-white h-screen flex flex-col overflow-hidden">
+    <div className="bg-white h-screen flex flex-col">
       {/* ================= HEADER ================= */}
-      <div className="p-2 pt-8 flex justify-between items-center gap-6 h-[120px] shrink-0">
+      <header className="px-3 py-2 flex flex-col md:flex-row flex-wrap md:flex-nowrap items-center gap-4 md:gap-6 h-auto md:h-[120px] shrink-0">
+        {/* Left logo */}
         {siteConfig?.image && (
-          <div className="relative h-24 w-64">
+          <div className="relative h-14 w-40 md:h-24 md:w-64">
             <Image
               src={`/${siteConfig.image}`}
               alt={siteConfig.name}
               fill
-              style={{ objectFit: "contain" }}
+              className="object-contain"
               priority
             />
           </div>
         )}
 
-        <div className="flex justify-evenly gap-16 flex-1">
-          <div className="flex flex-col items-center text-gray-900">
-            <p>Active Users Last 365 Days</p>
-            <OdometerDaily fetchUrl={`/api/active-365-days/${brand}`} field="activeLast365Days" />
-          </div>
-
-          <div className="flex flex-col items-center text-gray-900">
-            <p>Active Users Last 30 Days</p>
-            <OdometerDaily fetchUrl={`/api/active-30-days/${brand}`} field="activeLast30Days" />
-          </div>
-
-          <div className="flex flex-col items-center text-gray-900">
-            <p>Active Users Today</p>
-            <OdometerLast fetchUrl={`/api/active-today/${brand}`} field="activeToday" />
-          </div>
-
-          <div className="flex flex-col items-center text-gray-900">
-            <p>Active Users Now</p>
-            <OdometerLast fetchUrl={`/api/active-now/${brand}`} field="activeUsers" intervalms={10000} />
-          </div>
-        </div>
-
-        {/* CMG Logo with fullscreen toggle */}
-        <div
-          className="relative h-24 w-32 cursor-pointer"
+        <button
           onClick={toggleFullscreen}
-          title="Click to toggle fullscreen"
+          className="relative h-12 w-20 md:h-24 md:w-32 cursor-pointer block md:hidden"
+          title="Toggle fullscreen"
         >
           <Image
             src="/logo/cmg.png"
             alt="Charlton Media Group"
             fill
-            style={{ objectFit: "contain" }}
+            className="object-contain"
             priority
           />
+        </button>
+
+        {/* Metrics */}
+        <div className="flex flex-wrap justify-center md:justify-evenly gap-6 md:gap-16 flex-1 text-gray-900">
+          {[
+            {
+              label: "Active Users Last 365 Days",
+              url: `/api/active-365-days/${brand}`,
+              field: "activeLast365Days",
+            },
+            {
+              label: "Active Users Last 30 Days",
+              url: `/api/active-30-days/${brand}`,
+              field: "activeLast30Days",
+            },
+            {
+              label: "Active Users Today",
+              url: `/api/active-today/${brand}`,
+              field: "activeToday",
+            },
+            {
+              label: "Active Users Now",
+              url: `/api/active-now/${brand}`,
+              field: "activeUsers",
+            },
+          ].map((m) => (
+            <div key={m.label} className="flex flex-col items-center text-center">
+              <p className="text-xs md:text-sm">{m.label}</p>
+              <OdometerLast
+                fetchUrl={m.url}
+                field={m.field}
+                fontSize="clamp(1.5rem, 4vw, 3rem)"
+              />
+            </div>
+          ))}
         </div>
-      </div>
+
+        {/* CMG fullscreen toggle */}
+        <button
+          onClick={toggleFullscreen}
+          className="relative h-12 w-20 md:h-24 md:w-32 cursor-pointer hidden md:block"
+          title="Toggle fullscreen"
+        >
+          <Image
+            src="/logo/cmg.png"
+            alt="Charlton Media Group"
+            fill
+            className="object-contain"
+            priority
+          />
+        </button>
+      </header>
 
       {/* ================= MAIN CONTENT ================= */}
-      <div className="flex-1 flex items-center justify-center overflow-hidden">
-        <div className="w-full max-w-[1920px] flex gap-8 px-8">
+      <main className="flex-1 flex items-center justify-center overflow-hidden py-16">
+        <div className="w-full max-w-[1920px] flex flex-col md:flex-row gap-8 md:gap-8 px-3 md:px-8 h-fit">
           {showTopViews && (
-            <div className="w-[40%] flex items-center justify-center overflow-hidden">
+            <div className="w-full md:w-[40%] flex flex-col overflow-hidden">
               <TopViews
                 xmlUrl={articlesFeedUrl}
                 limit={10}
@@ -118,7 +151,7 @@ export default function BrandDashboard({
           )}
 
           {showVideoRotator && (
-            <div className="w-[60%] flex items-center justify-center overflow-hidden">
+            <div className="w-full md:w-[60%] flex flex-col h-full overflow-hidden">
               <VideoRotator
                 xmlUrl={videosFeedUrl}
                 displayTime={30}
@@ -127,10 +160,10 @@ export default function BrandDashboard({
             </div>
           )}
         </div>
-      </div>
+      </main>
 
       {/* ================= TICKERS ================= */}
-      <div className="shrink-0">
+      <footer className="shrink-0">
         <TickerCard
           feedUrl={exclusiveFeedUrl}
           duration={4000}
@@ -143,7 +176,7 @@ export default function BrandDashboard({
           speed={speed}
           backgroundColor={themeColor ? siteConfig?.color : undefined}
         />
-      </div>
+      </footer>
     </div>
   );
 }
