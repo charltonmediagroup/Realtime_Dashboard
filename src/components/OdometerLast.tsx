@@ -19,7 +19,7 @@ const OdometerLast = ({
   bold = false,
   color = "#010101",
   backgroundColor = "#ffffff00",
-  intervalms = 600000,
+  intervalms = 60000,
 }: OdometerProps) => {
   const [value, setValue] = useState(0);
 

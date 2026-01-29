@@ -13,14 +13,20 @@ import { useState, useEffect } from "react";
 interface BrandDashboardProps {
   brand: string;
   siteConfig: any;
-  speed?: number;
+  stripspeed?: number;
+  cardduration?: number;
+  activeNowIntervalms?: number;
+  activeTodayIntervalms?: number;
   themeColor?: boolean;
 }
 
 export default function BrandDashboard({
   brand,
   siteConfig,
-  speed = 100,
+  stripspeed = 100,
+  cardduration = 4000,
+  activeNowIntervalms = 10000,
+  activeTodayIntervalms = 60000,
   themeColor = true,
 }: BrandDashboardProps) {
   const safeReplace = (url: string) => (url ? url.replace(/\/$/, "") : "");
@@ -103,11 +109,13 @@ export default function BrandDashboard({
               label: "Active Users Today",
               url: `/api/active-today/${brand}`,
               field: "activeToday",
+              intervalms: activeTodayIntervalms,
             },
             {
               label: "Active Users Now",
               url: `/api/active-now/${brand}`,
               field: "activeUsers",
+              intervalms: activeNowIntervalms,
             },
           ].map((m) => (
             <div key={m.label} className="flex flex-col items-center text-center">
@@ -116,6 +124,7 @@ export default function BrandDashboard({
                 fetchUrl={m.url}
                 field={m.field}
                 fontSize="clamp(1.5rem, 4vw, 3rem)"
+                intervalms={m.intervalms}
               />
             </div>
           ))}
@@ -166,14 +175,14 @@ export default function BrandDashboard({
       <footer className="shrink-0">
         <TickerCard
           feedUrl={exclusiveFeedUrl}
-          duration={4000}
+          duration={cardduration}
           labelColor="#ff0000"
           backgroundColor={themeColor ? siteConfig?.color : "#f5f5f5"}
         />
 
         <TickerStrip
           feedUrl={feedUrl}
-          speed={speed}
+          speed={stripspeed}
           backgroundColor={themeColor ? siteConfig?.color : undefined}
         />
       </footer>
