@@ -53,18 +53,17 @@ export default function EditorialSettingsPage() {
     const handleSave = () => {
         const params = new URLSearchParams();
 
-        params.set("rotation", String(rotation));
-        params.set("stripspeed", String(stripSpeed));
+        if (rotation !== 60_000) params.set("rotation", String(rotation));
+        if (stripSpeed !== 100) params.set("stripspeed", String(stripSpeed));
 
-        // convert seconds → ms
         const cardDurationMs = Math.max(cardDurationSec, 2) * 1000;
-        params.set("cardduration", String(cardDurationMs));
+        if (cardDurationMs !== 4000) params.set("cardduration", String(cardDurationMs));
 
-        const activeTodayIntervalms = Math.max(activeTodayIntervalsec, 10) * 1000;
-        params.set("activeTodayIntervalms", String(activeTodayIntervalms));
+        const activeTodayMs = Math.max(activeTodayIntervalsec, 10) * 1000;
+        if (activeTodayMs !== 60_000) params.set("activeTodayIntervalms", String(activeTodayMs));
 
-        const activeNowIntervalms = Math.max(activeNowIntervalsec, 5) * 1000;
-        params.set("activeNowIntervalms", String(activeNowIntervalms));
+        const activeNowMs = Math.max(activeNowIntervalsec, 5) * 1000;
+        if (activeNowMs !== 10_000) params.set("activeNowIntervalms", String(activeNowMs));
 
         if (fullscreen) params.set("fullscreen", "1");
 

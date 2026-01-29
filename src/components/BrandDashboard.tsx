@@ -4,7 +4,6 @@
 import Image from "next/image";
 import TickerStrip from "./TickerStrip";
 import TickerCard from "./TickerCard";
-import OdometerDaily from "./OdometerDaily";
 import OdometerLast from "./OdometerLast";
 import VideoRotator from "./VideoRotator";
 import TopViews from "./TopViews";
