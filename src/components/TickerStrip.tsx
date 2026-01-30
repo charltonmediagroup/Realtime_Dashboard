@@ -149,7 +149,7 @@ const styles = {
     minWidth: 0,       // crucial: prevent content from forcing extra width
   },
   label: {
-    width: "100px",
+    width: "clamp(90px, 8vw, 170px)",
     fontWeight: "bold" as const,
     display: "flex",
     alignItems: "center",
@@ -159,7 +159,7 @@ const styles = {
     flexShrink: 0,
     textShadow: "0 0 5px rgba(0,0,0,0.5)",
     color: "white",
-    fontSize: "clamp(12px, 1.2vw, 16px)",
+    fontSize: "clamp(12px, 1.2vw, 24px)",
   },
   scroll: {
     flex: 1,

@@ -145,7 +145,7 @@ const styles = {
         width: "100%",
     },
     label: {
-        width: "100px",
+        width: "clamp(90px, 8vw, 170px)",
         fontWeight: 700,
         display: "flex",
         alignItems: "center",
@@ -154,7 +154,7 @@ const styles = {
         color: "white",
         height: "100%",
         flexShrink: 0,
-        fontSize: "clamp(12px, 1.2vw, 16px)",
+        fontSize: "clamp(12px, 1.2vw, 24px)",
     },
     scroll: {
         flex: 1,
