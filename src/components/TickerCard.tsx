@@ -1,7 +1,6 @@
 "use client";
 
-import { color } from "framer-motion";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 interface TickerCardProps {
     feedUrl: string;
@@ -17,18 +16,19 @@ export default function TickerCard({
     feedUrl,
     label = "Exclusive",
     duration = 4000,
-    backgroundColor = "#f5f5f5",
     labelColor = "#ff0000",
     limit = 10,
     refreshIntervalMs = 10 * 60 * 1000,
 }: TickerCardProps) {
     const [headlines, setHeadlines] = useState<string[]>([]);
     const [currentIndex, setCurrentIndex] = useState(0);
+    const scrollRef = useRef<HTMLDivElement>(null);
+    const headlineRef = useRef<HTMLDivElement>(null);
+    const [scrolling, setScrolling] = useState(false);
 
-    // Fetch feed and refresh
+    // Fetch feed
     useEffect(() => {
         if (!feedUrl) return;
-
         let timer: NodeJS.Timeout;
 
         const loadHeadlines = async () => {
@@ -44,7 +44,6 @@ export default function TickerCard({
                         .slice(0, limit)
                         .map((i) => i.querySelector("title")?.textContent?.trim() || "Untitled");
                 } else {
-                    // fallback to Atom feed
                     const entries = xml.querySelectorAll("entry");
                     titles = Array.from(entries)
                         .slice(0, limit)
@@ -59,55 +58,76 @@ export default function TickerCard({
 
         loadHeadlines();
         timer = setInterval(loadHeadlines, refreshIntervalMs);
-
         return () => clearInterval(timer);
     }, [feedUrl, limit, refreshIntervalMs]);
 
-    // Rotate headlines
+    // Handle horizontal scroll for long headlines
     useEffect(() => {
-        if (headlines.length === 0) return;
+        const scrollContainer = scrollRef.current;
+        const headlineEl = headlineRef.current;
+        if (!scrollContainer || !headlineEl) return;
 
-        const interval = setInterval(() => {
-            setCurrentIndex((prev) => (prev + 1) % headlines.length);
-        }, duration);
+        const containerWidth = scrollContainer.offsetWidth;
+        const headlineWidth = headlineEl.scrollWidth;
 
-        return () => clearInterval(interval);
-    }, [headlines, duration]);
+        if (headlineWidth > containerWidth) {
+            setScrolling(true);
+            const SCROLL_PADDING = 24;
+            const distance = headlineWidth - containerWidth + SCROLL_PADDING;
+            const speed = 50; // pixels per second
+            const scrollDuration = (distance / speed) * 1000;
+
+            const startTimeout = setTimeout(() => {
+                // Start horizontal scroll
+                headlineEl.style.transition = `transform ${scrollDuration}ms linear`;
+                headlineEl.style.transform = `translateX(-${distance}px)`;
+
+                // After scrolling, reset and move to next headline
+                const resetTimeout = setTimeout(() => {
+                    headlineEl.style.transition = "";
+                    headlineEl.style.transform = "translateX(0)";
+                    setScrolling(false);
+                    setCurrentIndex((prev) => (prev + 1) % headlines.length);
+                }, scrollDuration + 500);
+
+                return () => clearTimeout(resetTimeout);
+            }, duration);
+
+            return () => clearTimeout(startTimeout);
+        } else {
+            // Short headline: just wait duration before moving to next
+            const timeout = setTimeout(() => {
+                setCurrentIndex((prev) => (prev + 1) % headlines.length);
+            }, duration);
+            return () => clearTimeout(timeout);
+        }
+    }, [currentIndex, headlines, duration]);
 
     return (
         <div style={styles.ticker}>
-            <style>
-                {`
-          @font-face {
-            font-family: 'DIN';
-            src: url('/fonts/D-DIN.otf') format('opentype');
-            font-weight: 400;
-            font-style: normal;
-            font-display: swap;
-          }
-          @font-face {
-            font-family: 'DIN-Bold';
-            src: url('/fonts/D-DIN-Bold.otf') format('opentype');
-            font-weight: 700;
-            font-style: normal;
-            font-display: swap;
-          }
-        `}
-            </style>
             <div style={{ ...styles.label, backgroundColor: labelColor }}>{label}</div>
-            <div style={{ ...styles.scroll, backgroundColor: "#F2F2F2" }}>
+            <div style={styles.scroll} ref={scrollRef}>
                 {headlines.map((h, i) => (
                     <div
                         key={i}
                         style={{
-                            ...styles.headline,
+                            ...styles.headlineWrapper,
                             opacity: i === currentIndex ? 1 : 0,
-                            transform: i === currentIndex ? "translateY(0)" : "translateY(100%)",
+                            transform:
+                                i === currentIndex
+                                    ? "translateY(-50%)"
+                                    : "translateY(50%)",
                         }}
                     >
-                        {h}
+                        <div
+                            ref={i === currentIndex ? headlineRef : null}
+                            style={styles.headlineInner}
+                        >
+                            {h}
+                        </div>
                     </div>
                 ))}
+
             </div>
         </div>
     );
@@ -123,7 +143,6 @@ const styles = {
         fontFamily: '"DIN-Bold", Arial, sans-serif',
         overflow: "hidden",
         width: "100%",
-        minWidth: 0,
     },
     label: {
         width: "100px",
@@ -143,14 +162,12 @@ const styles = {
         overflow: "hidden",
         display: "flex",
         alignItems: "center",
-        minHeight: "50px", // ensures scroll container doesn't collapse
+        minHeight: "50px",
     },
     headline: {
         position: "absolute" as const,
-        top: 0,
+        top: "50%",
         left: 0,
-        right: 0,
-        bottom: 0,          // instead of height: 100%
         display: "flex",
         alignItems: "center",
         paddingLeft: "10px",
@@ -158,10 +175,30 @@ const styles = {
         textTransform: "uppercase" as const,
         fontSize: "clamp(12px, 1.2vw, 24px)",
         lineHeight: 1.2,
-        transition: "transform 0.6s ease, opacity 0.6s ease",
-        color: "#000",
         whiteSpace: "nowrap",
         overflow: "hidden",
         textOverflow: "ellipsis",
+        transform: "translateY(-50%)", // center vertically
+    },
+    headlineWrapper: {
+        position: "absolute" as const,
+        top: "50%",
+        left: 0,
+        right: 0,
+        display: "flex",
+        alignItems: "center",
+        paddingLeft: "10px",
+        fontWeight: 700,
+        textTransform: "uppercase" as const,
+        fontSize: "clamp(12px, 1.2vw, 24px)",
+        lineHeight: 1.2,
+        whiteSpace: "nowrap",
+        overflow: "hidden",
+        transition: "transform 0.6s ease, opacity 0.6s ease",
+    },
+    headlineInner: {
+        display: "inline-block",
+        whiteSpace: "nowrap",
+        willChange: "transform",
     },
 };
