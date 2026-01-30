@@ -4,8 +4,5 @@
       "main": true,
       "dev": true
     }
-  },
-    "security": {
-    "authorization": false
   }
 }
