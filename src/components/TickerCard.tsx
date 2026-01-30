@@ -72,7 +72,7 @@ export default function TickerCard({
 
         if (headlineWidth > containerWidth) {
             setScrolling(true);
-            const SCROLL_PADDING = 24;
+            const SCROLL_PADDING = 48;
             const distance = headlineWidth - containerWidth + SCROLL_PADDING;
             const speed = 50; // pixels per second
             const scrollDuration = (distance / speed) * 1000;
