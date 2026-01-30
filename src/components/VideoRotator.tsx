@@ -168,7 +168,7 @@ export default function VideoRotator({
         }
 
         .video-title {
-          font-size: 24px;
+          font-size: clamp(16px, 2vh, 22px);
           font-weight: bold;
           text-align: center;
           margin-top: 10px;
