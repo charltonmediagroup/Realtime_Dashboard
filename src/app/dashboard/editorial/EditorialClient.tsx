@@ -85,7 +85,7 @@ export default function EditorialPageClient() {
     let cancelled = false;
     const fetchBrands = async () => {
       try {
-        const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || process.env.JSON_PROVIDER_URL;
+        const baseUrl = process.env.JSON_PROVIDER_URL || process.env.NEXT_PUBLIC_BASE_URL;
         if (!baseUrl) return;
 
         const res = await fetch(`${baseUrl}/api/json-provider/dashboard-config/brand-all-properties?filter[editorial]=true`, { cache: "force-cache" });
