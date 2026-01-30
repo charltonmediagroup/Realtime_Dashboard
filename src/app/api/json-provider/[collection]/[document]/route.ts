@@ -12,6 +12,13 @@ const cache: Record<string, CacheEntry<unknown>> = {};
 // Cache TTL: 1 day
 const CACHE_TTL = 24 * 60 * 60 * 1000;
 
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*", // or your domain
+  "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type, Authorization",
+};
+
+
 /**
  * Convert query string values to correct types
  */
@@ -116,7 +123,7 @@ export async function GET(
     if (useCache) {
       const cached = cache[cacheKey];
       if (cached && cached.expiresAt > now) {
-        return NextResponse.json(cached.data);
+        return NextResponse.json(cached.data, { headers: corsHeaders });
       }
     }
 
@@ -154,7 +161,7 @@ export async function GET(
         expiresAt: now + CACHE_TTL,
       };
 
-      return NextResponse.json(result);
+      return NextResponse.json(result, { headers: corsHeaders });
     }
 
     /**
@@ -175,7 +182,7 @@ export async function GET(
       expiresAt: now + CACHE_TTL,
     };
 
-    return NextResponse.json(results);
+    return NextResponse.json(results, { headers: corsHeaders });
   } catch (err) {
     console.error("JSON Provider Error:", err);
     return NextResponse.json(

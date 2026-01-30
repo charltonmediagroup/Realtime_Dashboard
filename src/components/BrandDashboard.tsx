@@ -93,7 +93,7 @@ export default function BrandDashboard({
         </div>
 
         {/* Metrics */}
-        <div className="flex flex-wrap justify-evenly gap-2 md:gap-4 flex-1 text-gray-900">
+        <div className="grid grid-cols-2 gap-2 md:flex md:flex-nowrap md:justify-evenly md:gap-4 flex-1 text-gray-900">
           {[
             {
               label: "Active Users Last 365 Days",
@@ -185,7 +185,7 @@ export default function BrandDashboard({
               duration={cardduration}
             />
           </div>
-          <div className="w-full">
+          <div className="flex-1 min-w-0">
             <TickerStrip
               feedUrl={feedUrl}
               speed={stripspeed}
