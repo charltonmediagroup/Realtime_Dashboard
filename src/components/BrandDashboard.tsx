@@ -63,7 +63,7 @@ export default function BrandDashboard({
   };
 
   return (
-    <div className="bg-white flex flex-col min-h-0 md:h-screen">
+    <div className="bg-white flex flex-col min-h-screen md:h-screen">
       {/* ================= HEADER ================= */}
       <header className="flex flex-col md:flex-row items-center gap-4 md:gap-6 px-3 py-4 shrink-0 overflow-x-auto md:overflow-x-visible">
         {/* Left logo */}
@@ -155,8 +155,8 @@ export default function BrandDashboard({
       </header>
 
       {/* ================= MAIN CONTENT ================= */}
-      <main className="flex-1 flex flex-col md:flex-row items-center justify-center overflow-y-visible md:overflow-y-visible px-3 md:px-8 py-4 md:py-4 gap-8 md:gap-8">
-        <div className="w-full max-w-[1920px] flex flex-col justify-center md:flex-row gap-8 md:gap-8 px-3 md:px-8">
+      <main className="flex-1 flex flex-col md:flex-row items-center justify-center overflow-y-visible md:overflow-y-visible px-3 md:px-8 py-4 md:py-4 gap-8 md:gap-8 pb-[100px]">
+        <div className="w-full max-w-[1920px] flex flex-col justify-center items-center md:flex-row gap-8 md:gap-8 px-3 md:px-8">
           {showTopViews && (
             <div className="w-full md:w-[40%] flex flex-col overflow-hidden">
               <TopViews
@@ -180,7 +180,7 @@ export default function BrandDashboard({
       </main>
 
       {/* ================= TICKERS ================= */}
-      <footer className="shrink-0">
+      <footer className="fixed bottom-0 left-0 z-50 w-full md:static">
         <div className="flex flex-col md:space-y-0 gap-0">
           <div className="flex-1 min-w-0">
             <TickerCard
