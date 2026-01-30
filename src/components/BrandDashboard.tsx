@@ -5,6 +5,7 @@ import Image from "next/image";
 import TickerStrip from "./TickerStrip";
 import TickerCard from "./TickerCard";
 import OdometerLast from "./OdometerLast";
+import OdometerDaily from "./OdometerDaily";
 import VideoRotator from "./VideoRotator";
 import TopViews from "./TopViews";
 import { useState, useEffect } from "react";
@@ -59,93 +60,100 @@ export default function BrandDashboard({
   };
 
   return (
-    <div className="bg-white h-screen flex flex-col">
+    <div className="bg-white flex flex-col min-h-0 md:h-screen">
       {/* ================= HEADER ================= */}
-      <header className="px-3 py-2 flex flex-col md:flex-row flex-wrap md:flex-nowrap items-center gap-4 md:gap-6 h-auto md:h-[120px] shrink-0">
+      <header className="flex flex-col md:flex-row items-center gap-4 md:gap-6 px-3 py-4 shrink-0 overflow-x-auto md:overflow-x-visible">
         {/* Left logo */}
-        {siteConfig?.image && (
-          <div className="relative h-14 w-40 md:h-24 md:w-64">
+        <div className="flex justify-between w-full md:w-fit">
+          {siteConfig?.image && (
+            <div className="relative h-14 w-40 md:h-24 md:w-64">
+              <Image
+                src={`/${siteConfig.image}`}
+                alt={siteConfig.name}
+                fill
+                className="object-contain"
+                priority
+              />
+            </div>
+          )}
+
+          <div
+            onClick={toggleFullscreen}
+            className="relative h-12 w-20 md:h-24 md:w-32 cursor-pointer block md:hidden"
+            title="Toggle fullscreen"
+          >
             <Image
-              src={`/${siteConfig.image}`}
-              alt={siteConfig.name}
+              src="/logo/cmg.png"
+              alt="Charlton Media Group"
               fill
               className="object-contain"
               priority
             />
           </div>
-        )}
-
-        <button
-          onClick={toggleFullscreen}
-          className="relative h-12 w-20 md:h-24 md:w-32 cursor-pointer block md:hidden"
-          title="Toggle fullscreen"
-        >
-          <Image
-            src="/logo/cmg.png"
-            alt="Charlton Media Group"
-            fill
-            className="object-contain"
-            priority
-          />
-        </button>
+        </div>
 
         {/* Metrics */}
-        <div className="flex flex-wrap justify-center md:justify-evenly gap-6 md:gap-16 flex-1 text-gray-900">
+        <div className="flex flex-wrap justify-evenly gap-2 md:gap-4 flex-1 text-gray-900">
           {[
             {
               label: "Active Users Last 365 Days",
               url: `/api/active-365-days/${brand}`,
               field: "activeLast365Days",
+              type: "daily",
             },
             {
               label: "Active Users Last 30 Days",
               url: `/api/active-30-days/${brand}`,
               field: "activeLast30Days",
+              type: "daily",
             },
             {
               label: "Active Users Today",
               url: `/api/active-today/${brand}`,
               field: "activeToday",
+              type: "last",
               intervalms: activeTodayIntervalms,
             },
             {
               label: "Active Users Now",
               url: `/api/active-now/${brand}`,
               field: "activeUsers",
+              type: "last",
               intervalms: activeNowIntervalms,
             },
           ].map((m) => (
-            <div key={m.label} className="flex flex-col items-center text-center">
+            <div key={m.label} className="flex flex-col items-center text-center flex-shrink-0">
               <p className="text-xs md:text-sm">{m.label}</p>
-              <OdometerLast
-                fetchUrl={m.url}
-                field={m.field}
-                fontSize="clamp(1.5rem, 4vw, 3rem)"
-                intervalms={m.intervalms}
-              />
+              {m.type === "daily" ? (
+                <OdometerDaily fetchUrl={m.url} field={m.field} />
+              ) : (
+                <OdometerLast fetchUrl={m.url} field={m.field} intervalms={m.intervalms} />
+              )}
             </div>
           ))}
         </div>
 
         {/* CMG fullscreen toggle */}
-        <button
-          onClick={toggleFullscreen}
-          className="relative h-12 w-20 md:h-24 md:w-32 cursor-pointer hidden md:block"
-          title="Toggle fullscreen"
-        >
-          <Image
-            src="/logo/cmg.png"
-            alt="Charlton Media Group"
-            fill
-            className="object-contain"
-            priority
-          />
-        </button>
+        <div className="flex w-fit">
+          <div
+            onClick={toggleFullscreen}
+            className="relative h-12 w-20 md:h-24 md:w-32 cursor-pointer hidden md:block"
+            title="Toggle fullscreen"
+          >
+            <Image
+              src="/logo/cmg.png"
+              alt="Charlton Media Group"
+              fill
+              className="object-contain"
+              priority
+            />
+          </div>
+        </div>
       </header>
 
       {/* ================= MAIN CONTENT ================= */}
-      <main className="flex-1 flex items-center justify-center overflow-hidden py-16">
-        <div className="w-full max-w-[1920px] flex flex-col md:flex-row gap-8 md:gap-8 px-3 md:px-8 h-fit">
+      <main className="flex-1 flex flex-col md:flex-row items-center justify-center overflow-y-visible md:overflow-y-visible px-3 md:px-8 py-4 md:py-4 gap-8 md:gap-8">
+        <div className="w-full max-w-[1920px] flex flex-col justify-center md:flex-row gap-8 md:gap-8 px-3 md:px-8">
           {showTopViews && (
             <div className="w-full md:w-[40%] flex flex-col overflow-hidden">
               <TopViews
@@ -157,7 +165,7 @@ export default function BrandDashboard({
           )}
 
           {showVideoRotator && (
-            <div className="w-full md:w-[60%] flex flex-col h-full overflow-hidden">
+            <div className="w-full md:w-[clamp(40%,100vh,80%)] flex flex-col h-full overflow-hidden">
               <VideoRotator
                 xmlUrl={videosFeedUrl}
                 displayTime={30}

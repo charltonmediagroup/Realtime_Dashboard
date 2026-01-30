@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import Stepper from "@/src/components/Stepper";
 
 const ROTATION_OPTIONS = [
     { label: "Pause", value: 0 },
@@ -103,29 +104,44 @@ export default function EditorialSettingsClient() {
                     </select>
                 </div>
 
-                {/* Card Duration */}
-                <div>
-                    <label className="block text-sm font-medium mb-1">Exclusives Duration (seconds)</label>
-                    <input type="number" min={2} max={120} value={cardDurationSec} onChange={(e) => setCardDurationSec(Math.max(2, Number(e.target.value)))} className="w-full border rounded px-3 py-2" />
-                </div>
+                <Stepper
+                    label="Exclusives Duration"
+                    value={cardDurationSec}
+                    min={2}
+                    max={120}
+                    step={1}
+                    suffix="sec"
+                    onChange={setCardDurationSec}
+                />
 
-                {/* Latest News Speed */}
-                <div>
-                    <label className="block text-sm font-medium mb-1">Latest News Speed</label>
-                    <input type="number" value={stripSpeed} step={10} min={10} max={1000} onChange={(e) => setStripSpeed(Number(e.target.value))} className="w-full border rounded px-3 py-2" />
-                </div>
+                <Stepper
+                    label="Latest News Speed"
+                    value={stripSpeed}
+                    min={10}
+                    max={1000}
+                    step={10}
+                    onChange={setStripSpeed}
+                />
 
-                {/* Active Today */}
-                <div>
-                    <label className="block text-sm font-medium mb-1">Active Today Refresh Interval <span className="text-xs">(Recommended 60 seconds)</span></label>
-                    <input type="number" min={10} max={120} step={10} value={activeTodayIntervalsec} onChange={(e) => setActiveTodayIntervalms(Math.max(10, Number(e.target.value)))} className="w-full border rounded px-3 py-2" />
-                </div>
+                <Stepper
+                    label="Active Today Refresh Interval"
+                    value={activeTodayIntervalsec}
+                    min={10}
+                    max={120}
+                    step={10}
+                    suffix="sec"
+                    onChange={setActiveTodayIntervalms}
+                />
 
-                {/* Active Now */}
-                <div>
-                    <label className="block text-sm font-medium mb-1">Active Now Refresh Interval <span className="text-xs">(Recommended 10 seconds)</span></label>
-                    <input type="number" min={5} max={120} step={5} value={activeNowIntervalsec} onChange={(e) => setActiveNowIntervalms(Math.max(5, Number(e.target.value)))} className="w-full border rounded px-3 py-2" />
-                </div>
+                <Stepper
+                    label="Active Now Refresh Interval"
+                    value={activeNowIntervalsec}
+                    min={5}
+                    max={120}
+                    step={5}
+                    suffix="sec"
+                    onChange={setActiveNowIntervalms}
+                />
 
                 {/* Fullscreen */}
                 <div className="flex items-center gap-2">

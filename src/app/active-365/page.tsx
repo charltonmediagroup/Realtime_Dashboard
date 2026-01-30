@@ -3,7 +3,6 @@ import React from "react";
 import OdometerDaily from "@/src/components/OdometerDaily";
 
 interface SearchParams {
-  fontSize?: string;
   bold?: string;
   color?: string;
   backgroundColor?: string;
@@ -16,7 +15,6 @@ interface Props {
 const ActiveLast365Days = async ({ searchParams }: Props) => {
   const params = await searchParams; // unwrap the Promise
 
-  const fontSize = params.fontSize || "3rem";
   const bold = params.bold === "true";
   const color = params.color || "#010101";
   const backgroundColor = params.backgroundColor || "#ffffff";
@@ -28,7 +26,6 @@ const ActiveLast365Days = async ({ searchParams }: Props) => {
       <OdometerDaily
         fetchUrl="/api/active-365-days"
         field="activeLast365Days"
-        fontSize={fontSize}
         bold={bold}
         color={color}
         backgroundColor={backgroundColor}

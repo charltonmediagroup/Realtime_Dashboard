@@ -17,7 +17,6 @@ interface Props {
 const RealtimeActive = async ({ searchParams }: Props) => {
   const params = await searchParams; // unwrap the Promise
 
-  const fontSize = params.fontSize || "3rem";
   const bold = params.bold === "true";
   const color = params.color || "#010101";
   const backgroundColor = params.backgroundColor || "#ffffff";
@@ -30,7 +29,6 @@ const RealtimeActive = async ({ searchParams }: Props) => {
         className="bg-transparent min-h-screen flex items-center justify-center">
       <OdometerLast
         fetchUrl="/api/active-today"
-        fontSize={fontSize}
         bold={bold}
         color={color}
         backgroundColor={backgroundColor}

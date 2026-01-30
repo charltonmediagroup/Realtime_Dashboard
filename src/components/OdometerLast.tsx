@@ -5,7 +5,6 @@ import { useEffect, useState } from "react";
 interface OdometerProps {
   fetchUrl?: string;
   field?: string;
-  fontSize?: string;
   bold?: boolean;
   color?: string;
   backgroundColor?: string;
@@ -15,7 +14,6 @@ interface OdometerProps {
 const OdometerLast = ({
   fetchUrl = "/api/active-today",
   field = "activeToday",
-  fontSize = "3rem",
   bold = false,
   color = "#010101",
   backgroundColor = "#ffffff00",
@@ -42,8 +40,8 @@ const OdometerLast = ({
     <div
       style={{
         display: "flex",
-        fontSize,
         fontWeight: bold ? "bold" : "normal",
+        fontSize: "clamp(20px, 2vw, 40px)",
         color,
         backgroundColor,
         lineHeight: 1,

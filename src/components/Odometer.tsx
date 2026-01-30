@@ -5,7 +5,6 @@ import { motion, AnimatePresence } from "framer-motion";
 
 interface OdometerProps {
   fetchUrl?: string;
-  fontSize?: string;
   bold?: boolean;
   color?: string;
   backgroundColor?: string;
@@ -14,7 +13,6 @@ interface OdometerProps {
 
 const Odometer = ({
   fetchUrl = "/api/active-now",
-  fontSize = "3rem",
   bold = false,
   color = "#010101",
   backgroundColor = "#ffffff00",
@@ -62,7 +60,6 @@ const Odometer = ({
     <div
       style={{
         display: "flex",
-        fontSize,
         fontWeight: bold ? "bold" : "normal",
         color,
         backgroundColor,
@@ -75,7 +72,6 @@ const Odometer = ({
           style={{
             position: "relative",
             width: "1ch",
-            height: fontSize,
             overflow: "hidden",
             display: "inline-block",
           }}

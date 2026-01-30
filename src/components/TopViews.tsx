@@ -118,7 +118,7 @@ const styles: Record<string, React.CSSProperties> = {
     tableLayout: "fixed",
     borderCollapse: "collapse",
     height: "100%",      
-    fontSize: "clamp(16px, 2vw, 22px)", // responsive font
+    fontSize: "clamp(16px, 3vh, 22px)", // responsive font
   },
   th: {
     textAlign: "left",

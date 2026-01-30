@@ -37,7 +37,6 @@ const RealtimeActiveBrand = async ({ params, searchParams }: Props) => {
     >
       <OdometerLast
         fetchUrl={`/api/active-now/${brand}`}
-        fontSize={fontSize}
         field={field}
         bold={bold}
         color={color}

@@ -3,7 +3,6 @@ import React from "react";
 import Odometer from "@/src/components/Odometer";
 
 interface SearchParams {
-  fontSize?: string;
   bold?: string;
   color?: string;
   backgroundColor?: string;
@@ -17,7 +16,6 @@ interface Props {
 const RealtimeActive = async ({ searchParams }: Props) => {
   const params = await searchParams; // unwrap the Promise
 
-  const fontSize = params.fontSize || "3rem";
   const bold = params.bold === "true";
   const color = params.color || "#010101";
   const backgroundColor = params.backgroundColor || "#ffffff";
@@ -31,7 +29,6 @@ const RealtimeActive = async ({ searchParams }: Props) => {
         className="bg-transparent min-h-screen flex items-center justify-center">
       <Odometer
         fetchUrl="/api/active-now"
-        fontSize={fontSize}
         bold={bold}
         color={color}
         backgroundColor={backgroundColor}

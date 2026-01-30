@@ -20,7 +20,6 @@ const RealtimeActiveBrand = async ({ params, searchParams }: Props) => {
   const { brand } = await params;
   const sp = await searchParams;
 
-  const fontSize = sp.fontSize || "3rem";
   const bold = sp.bold === "true";
   const color = sp.color || "#010101";
   const backgroundColor = sp.backgroundColor || "#ffffff";
@@ -35,7 +34,6 @@ const RealtimeActiveBrand = async ({ params, searchParams }: Props) => {
       <OdometerLast
         fetchUrl={`/api/active-today/${brand}`}
         field="activeToday"
-        fontSize={fontSize}
         bold={bold}
         color={color}
         backgroundColor={backgroundColor}
