@@ -178,13 +178,14 @@ const styles = {
         whiteSpace: "nowrap",
         overflow: "hidden",
         textOverflow: "ellipsis",
-        transform: "translateY(-50%)", // center vertically
+        transform: "translateY(-50%)",
     },
     headlineWrapper: {
         position: "absolute" as const,
         top: "50%",
         left: 0,
         right: 0,
+        height: "100%",
         display: "flex",
         alignItems: "center",
         paddingLeft: "10px",
@@ -194,6 +195,7 @@ const styles = {
         lineHeight: 1.2,
         whiteSpace: "nowrap",
         overflow: "hidden",
+        backgroundColor: "#F2F2F2",
         transition: "transform 0.6s ease, opacity 0.6s ease",
     },
     headlineInner: {
