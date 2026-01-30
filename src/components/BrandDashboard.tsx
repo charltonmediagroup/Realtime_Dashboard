@@ -177,9 +177,9 @@ export default function BrandDashboard({
       </main>
 
       {/* ================= TICKERS ================= */}
-      <footer className="fixed bottom-0 left-0 z-50 w-full">
-        <div className="flex flex-col w-full gap-0">
-          <div className="w-full">
+      <footer className="shrink-0">
+        <div className="flex flex-col md:space-y-0 gap-0">
+          <div className="flex-1 min-w-0">
             <TickerCard
               feedUrl={exclusiveFeedUrl}
               duration={cardduration}
