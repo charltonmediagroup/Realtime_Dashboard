@@ -143,6 +143,7 @@ const styles = {
         fontFamily: '"DIN-Bold", Arial, sans-serif',
         overflow: "hidden",
         width: "100%",
+        backgroundColor:"#F0F0F0"
     },
     label: {
         width: "clamp(90px, 8vw, 170px)",

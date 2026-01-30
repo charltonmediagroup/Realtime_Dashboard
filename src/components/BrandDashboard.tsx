@@ -17,6 +17,8 @@ interface BrandDashboardProps {
   cardduration?: number;
   activeNowIntervalms?: number;
   activeTodayIntervalms?: number;
+  videoDurationTime?: number;
+
 }
 
 export default function BrandDashboard({
@@ -26,6 +28,7 @@ export default function BrandDashboard({
   cardduration = 4000,
   activeNowIntervalms = 10000,
   activeTodayIntervalms = 60000,
+  videoDurationTime = 30
 }: BrandDashboardProps) {
   const safeReplace = (url: string) => (url ? url.replace(/\/$/, "") : "");
 
@@ -168,7 +171,7 @@ export default function BrandDashboard({
             <div className="w-full md:w-[clamp(40%,100vh,80%)] flex flex-col h-full overflow-hidden">
               <VideoRotator
                 xmlUrl={videosFeedUrl}
-                displayTime={30}
+                displayTime={videoDurationTime}
                 onError={() => setShowVideoRotator(false)}
               />
             </div>

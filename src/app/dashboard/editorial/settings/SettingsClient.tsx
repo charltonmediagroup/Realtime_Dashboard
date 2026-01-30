@@ -22,6 +22,7 @@ const DEFAULTS = {
     cardduration: 4000,
     activeNowIntervalms: 10_000,
     activeTodayIntervalms: 60_000,
+    videoDisplayTime: 30,
     fullscreen: false,
 };
 
@@ -35,6 +36,7 @@ export default function EditorialSettingsClient() {
     const [cardDurationSec, setCardDurationSec] = useState<number>(DEFAULTS.cardduration / 1000);
     const [activeNowIntervalsec, setActiveNowIntervalms] = useState<number>(DEFAULTS.activeNowIntervalms / 1000);
     const [activeTodayIntervalsec, setActiveTodayIntervalms] = useState<number>(DEFAULTS.activeTodayIntervalms / 1000);
+    const [videoDisplayTime, setVideoDisplayTime] = useState<number>(DEFAULTS.videoDisplayTime);
     const [fullscreen, setFullscreen] = useState<boolean>(DEFAULTS.fullscreen);
 
     /* ---------------- INITIALIZE FROM URL ---------------- */
@@ -53,6 +55,9 @@ export default function EditorialSettingsClient() {
 
         const at = searchParams.get("activeTodayIntervalms");
         if (at !== null && !isNaN(Number(at))) setActiveTodayIntervalms(Math.max(10, Math.round(Number(at) / 1000)));
+
+        const vdt = searchParams.get("videoDisplayTime");
+        if (vdt !== null && !isNaN(Number(vdt))) setVideoDisplayTime(Number(vdt));
 
         const an = searchParams.get("activeNowIntervalms");
         if (an !== null && !isNaN(Number(an))) setActiveNowIntervalms(Math.max(5, Math.round(Number(an) / 1000)));
@@ -74,6 +79,8 @@ export default function EditorialSettingsClient() {
         const activeNowMs = Math.max(activeNowIntervalsec, 5) * 1000;
         if (activeNowMs !== DEFAULTS.activeNowIntervalms) params.set("activeNowIntervalms", String(activeNowMs));
 
+        if (videoDisplayTime !== DEFAULTS.videoDisplayTime) params.set("videoDisplayTime", String(videoDisplayTime));
+
         if (fullscreen !== DEFAULTS.fullscreen) params.set("fullscreen", "1");
 
         router.push(`/dashboard/editorial?${params.toString()}`);
@@ -86,6 +93,7 @@ export default function EditorialSettingsClient() {
         setCardDurationSec(DEFAULTS.cardduration / 1000);
         setActiveTodayIntervalms(DEFAULTS.activeTodayIntervalms / 1000);
         setActiveNowIntervalms(DEFAULTS.activeNowIntervalms / 1000);
+        setVideoDisplayTime(DEFAULTS.videoDisplayTime);
         setFullscreen(DEFAULTS.fullscreen);
     };
 
@@ -141,6 +149,15 @@ export default function EditorialSettingsClient() {
                     step={5}
                     suffix="sec"
                     onChange={setActiveNowIntervalms}
+                />
+                <Stepper
+                    label="Video Duration"
+                    value={videoDisplayTime}
+                    min={5}
+                    max={60}
+                    step={5}
+                    suffix="sec"
+                    onChange={setVideoDisplayTime}
                 />
 
                 {/* Fullscreen */}

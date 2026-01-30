@@ -31,6 +31,7 @@ const DEFAULTS = {
   activeNowIntervalms: 10_000,
   activeTodayIntervalms: 60_000,
   fullscreen: false,
+  videoDisplayTime: 30
 };
 
 export default function EditorialPageClient() {
@@ -42,6 +43,7 @@ export default function EditorialPageClient() {
   const [cardduration, setCardduration] = useState(DEFAULTS.cardduration);
   const [activeNowIntervalms, setActiveNowIntervalms] = useState(DEFAULTS.activeNowIntervalms);
   const [activeTodayIntervalms, setActiveTodayIntervalms] = useState(DEFAULTS.activeTodayIntervalms);
+  const [videoDisplayTime, setVideoDisplayTime] = useState(DEFAULTS.videoDisplayTime)
   const [autoFullscreen, setAutoFullscreen] = useState(DEFAULTS.fullscreen);
 
   const [brands, setBrands] = useState<BrandEntry[]>([]);
@@ -67,6 +69,9 @@ export default function EditorialPageClient() {
 
     const at = searchParams.get("activeTodayIntervalms");
     if (at !== null && !isNaN(Number(at))) setActiveTodayIntervalms(Number(at));
+
+    const vdt = searchParams.get("videoDisplayTime");
+    if (vdt !== null && !isNaN(Number(vdt))) setVideoDisplayTime(Number(vdt));
 
     const fs = searchParams.get("fullscreen");
     if (fs !== null) setAutoFullscreen(fs === "1");
@@ -141,6 +146,7 @@ export default function EditorialPageClient() {
         cardduration={cardduration}
         activeNowIntervalms={activeNowIntervalms}
         activeTodayIntervalms={activeTodayIntervalms}
+        videoDurationTime={videoDisplayTime}
       />
 
       {
@@ -163,6 +169,7 @@ export default function EditorialPageClient() {
               if (cardduration !== DEFAULTS.cardduration) params.set("cardduration", String(cardduration));
               if (activeTodayIntervalms !== DEFAULTS.activeTodayIntervalms) params.set("activeTodayIntervalms", String(activeTodayIntervalms));
               if (activeNowIntervalms !== DEFAULTS.activeNowIntervalms) params.set("activeNowIntervalms", String(activeNowIntervalms));
+              if (videoDisplayTime !== DEFAULTS.videoDisplayTime) params.set("videoDisplayTime", String(videoDisplayTime));
               if (autoFullscreen !== DEFAULTS.fullscreen) params.set("fullscreen", "1");
               router.push(`/dashboard/editorial/settings?${params.toString()}`);
             }} className="px-4 py-2 rounded bg-white/10 hover:bg-white/20">⚙ Settings</button>
