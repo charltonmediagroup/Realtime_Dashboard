@@ -30,5 +30,5 @@ export default function Countdown({ target, done }: CountdownProps) {
     return () => clearInterval(interval);
   }, [target, done]);
 
-  return <span>{time}</span>;
+  return <span className="uppercase">{time}</span>;
 }

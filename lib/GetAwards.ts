@@ -15,6 +15,8 @@ export interface Award {
   startDate?: string | null;
   endDate?: string | null;
   image?: string;
+  city?: string | null;
+  contactPerson?: string | null;
 }
 
 /* ---------------- HELPERS ---------------- */
@@ -45,8 +47,74 @@ async function safeFetch(url: string) {
   return res;
 }
 
+/* ---------------- CITY DETECTION ---------------- */
+const KNOWN_CITIES = [
+  "Singapore", "Hong Kong", "Bangkok", "Manila", "Jakarta",
+  "Kuala Lumpur", "Ho Chi Minh", "Hanoi", "Phnom Penh", "Yangon",
+  "Taipei", "Seoul", "Tokyo", "Shanghai", "Beijing", "Shenzhen",
+  "Mumbai", "New Delhi", "Dubai", "Sydney", "Melbourne",
+  "Macau", "Cebu", "Davao", "Colombo", "Dhaka",
+];
+
+const KNOWN_REGIONS = [
+  "Asia Pacific", "Asia", "Southeast Asia", "ASEAN",
+  "Greater China", "South Asia", "Middle East",
+];
+
+function detectCity(title: string): string | null {
+  const lower = title.toLowerCase();
+  for (const city of KNOWN_CITIES) {
+    if (lower.includes(city.toLowerCase())) return city;
+  }
+  for (const region of KNOWN_REGIONS) {
+    if (lower.includes(region.toLowerCase())) return region;
+  }
+  return null;
+}
+
+/* ---------------- CONTACT PERSON DETECTION ---------------- */
+function detectContactPerson($: cheerio.CheerioAPI, pageText: string): string | null {
+  // Method 1: structured HTML — section.block-contact-data > strong
+  const section = $("section.block-contact-data").first();
+  if (section.length) {
+    const name = section.find("strong").first().text().trim();
+    if (name) return name;
+  }
+
+  // Method 2: regex on page text — "For more details, contact: FirstName LastName"
+  const match = pageText.match(/For more details,\s*contact:\s*([A-Z][a-z]+(?:\s+[A-Z][a-z]+)+)/);
+  if (match) return match[1].trim();
+
+  return null;
+}
+
+/* ---------------- BATCH HELPER ---------------- */
+const BATCH_SIZE = 5;
+
+async function processInBatches<T, R>(
+  items: T[],
+  fn: (item: T) => Promise<R>,
+): Promise<R[]> {
+  const results: R[] = [];
+  for (let i = 0; i < items.length; i += BATCH_SIZE) {
+    const batch = items.slice(i, i + BATCH_SIZE);
+    const batchResults = await Promise.all(batch.map(fn));
+    results.push(...batchResults);
+  }
+  return results;
+}
+
+/* ---------------- CACHE ---------------- */
+let awardsCache: { data: Award[]; timestamp: number } | null = null;
+const CACHE_DURATION = 7 * 24 * 60 * 60 * 1000; // 1 week
+
 /* ---------------- MAIN SCRAPER ---------------- */
-export async function getAwards(brands: Brand[]): Promise<Award[]> {
+export async function getAwards(brands: Brand[], forceRefresh = false): Promise<Award[]> {
+  if (!forceRefresh && awardsCache && Date.now() - awardsCache.timestamp < CACHE_DURATION) {
+    return awardsCache.data;
+  }
+
+  // 1. Fetch JSON lists for all brands (lightweight, parallel is fine)
   const awardsRawArr = await Promise.all(
     brands.map(async (b) => {
       try {
@@ -62,55 +130,58 @@ export async function getAwards(brands: Brand[]): Promise<Award[]> {
 
   let awardsRaw = awardsRawArr.flat();
 
-  // Attach brand and generate id
-  awardsRaw = awardsRaw.map((a: any, idx: number) => {
+  // 2. Attach brand and generate id
+  awardsRaw = awardsRaw.map((a: Record<string, unknown>, idx: number) => {
     const brand = brands.find((b) =>
-      normalizeTitle(a.view_node).startsWith(normalizeTitle(b.url))
+      normalizeTitle(a.view_node as string).startsWith(normalizeTitle(b.url))
     );
     return {
       ...a,
-      id: a.view_node || `award-${idx}`,
+      id: (a.view_node as string) || `award-${idx}`,
       brand: brand?.brand || "unknown",
     };
   });
 
-  // Deduplicate
+  // 3. Deduplicate
   const uniqueMap = new Map<string, Award>();
   for (const a of awardsRaw) {
-    if (!a.title || !a.field_date) continue;
-    const key =
-      normalizeTitle(a.title) +
-      "_" +
-      new Date(a.field_date).toISOString().split("T")[0];
-    if (!uniqueMap.has(key)) uniqueMap.set(key, a);
+    const title = a.title as string;
+    const fieldDate = a.field_date as string;
+    if (!title || !fieldDate) continue;
+    const key = normalizeTitle(title) + "_" + new Date(fieldDate).toISOString().split("T")[0];
+    if (!uniqueMap.has(key)) uniqueMap.set(key, a as Award);
   }
-  const uniqueAwards = Array.from(uniqueMap.values());
 
-  // Fetch nomination dates
-  const awardsWithDates = await Promise.all(
-    uniqueAwards.map(async (award) => {
+  // 4. Sort by date BEFORE scraping — upcoming awards get processed first
+  const uniqueAwards = Array.from(uniqueMap.values()).sort(
+    (a, b) => new Date(a.field_date).getTime() - new Date(b.field_date).getTime(),
+  );
+
+  // 5. Fetch nomination dates (batched) AND images (per brand) in parallel
+  const [awardsWithDates, imageMapsArr] = await Promise.all([
+    processInBatches(uniqueAwards, async (award) => {
       try {
         const html = await safeFetch(award.view_node).then((r) => r.text());
         const $ = cheerio.load(html);
+        const pageText = $("body").text();
         return {
           ...award,
           startDate: $(".nomination-date .start-date").attr("date") || null,
           endDate: $(".nomination-date .end-date").attr("date") || null,
+          city: detectCity(award.title),
+          contactPerson: detectContactPerson($, pageText),
         };
       } catch {
-        return { ...award, startDate: null, endDate: null };
+        return { ...award, startDate: null, endDate: null, city: detectCity(award.title), contactPerson: null };
       }
-    })
-  );
+    }),
+    Promise.all(brands.map((b) => fetchAwardImagesMap(b.url))),
+  ]);
 
-  // Fetch images
-  const imageMapsArr = await Promise.all(
-    brands.map((b) => fetchAwardImagesMap(b.url))
-  );
+  // 6. Map images to awards
   const brandImageMaps: Record<string, Record<string, string>> = {};
   brands.forEach((b, i) => (brandImageMaps[b.brand] = imageMapsArr[i] || {}));
 
-  // Map images to awards
   const awardsWithImages = awardsWithDates.map((a) => {
     const brandMap = brandImageMaps[a.brand];
     if (!brandMap) return a;
@@ -123,11 +194,7 @@ export async function getAwards(brands: Brand[]): Promise<Award[]> {
     return a;
   });
 
-  // Sort by field_date
-  awardsWithImages.sort(
-    (a, b) => new Date(a.field_date).getTime() - new Date(b.field_date).getTime()
-  );
-
+  awardsCache = { data: awardsWithImages, timestamp: Date.now() };
   return awardsWithImages;
 }
 

@@ -3,9 +3,16 @@
 import { useEffect, useState } from "react";
 import Stepper from "@/src/components/Stepper";
 
+interface SiteConfig {
+  url?: string;
+  name?: string;
+  awards?: boolean;
+  [key: string]: unknown;
+}
+
 interface EditorialBrandSettingsClientProps {
   brand: string;
-  siteConfig: any;
+  siteConfig: SiteConfig;
   currentParams: Record<string, string>;
   onClose: () => void;
   onSave?: (updatedParams: Record<string, string>) => void;

@@ -24,9 +24,13 @@ const OdometerLast = ({
   // Fetch latest value
   useEffect(() => {
     const fetchValue = async () => {
-      const res = await fetch(`${fetchUrl}?intervalms=${intervalms}`);
-      const data = await res.json();
-      if (typeof data[field] === "number") setValue(data[field]);
+      try {
+        const res = await fetch(`${fetchUrl}?intervalms=${intervalms}`);
+        const data = await res.json();
+        if (typeof data[field] === "number") setValue(data[field]);
+      } catch {
+        // silently retry on next interval
+      }
     };
 
     fetchValue();

@@ -11,6 +11,26 @@ const AwardsDashboard = dynamic(
   { ssr: false }
 );
 
+interface SiteConfig {
+  url?: string;
+  name?: string;
+  awards?: boolean;
+  [key: string]: unknown;
+}
+
+interface AwardsConfigEntry {
+  id: string;
+  brand: string;
+  title: string;
+  field_date: string;
+  view_node: string;
+  startDate?: string | null;
+  endDate?: string | null;
+  image?: string;
+  city?: string | null;
+  contactPerson?: string | null;
+}
+
 interface BrandPageProps {
   brand: string;
 }
@@ -18,8 +38,8 @@ interface BrandPageProps {
 export default function AwardsBrandClient({ brand }: BrandPageProps) {
   const searchParams = useSearchParams();
   const router = useRouter();
-  const [siteConfig, setSiteConfig] = useState<any | null>(null);
-  const [awardsConfig, setAwardsConfig] = useState<any | null>(null);
+  const [siteConfig, setSiteConfig] = useState<SiteConfig | null>(null);
+  const [awardsConfig, setAwardsConfig] = useState<AwardsConfigEntry[] | null>(null);
   const [showSettings, setShowSettings] = useState(false);
   const [showControls, setShowControls] = useState(false);
   const hideTimer = useRef<NodeJS.Timeout | null>(null);
@@ -37,7 +57,7 @@ export default function AwardsBrandClient({ brand }: BrandPageProps) {
           `${baseUrl}/api/json-provider/dashboard-config/brand-all-properties/${brand}`,
           { cache: "no-store" }
         );
-        console.log("test: ", res)
+
         if (!res.ok) throw new Error("Brand not found");
         setSiteConfig(await res.json());
       } catch {
@@ -66,7 +86,7 @@ export default function AwardsBrandClient({ brand }: BrandPageProps) {
           `${baseUrl}/api/awards/${brand}`,
           { cache: "no-store" }
         );
-        console.log("test: ", res)
+
         if (!res.ok) throw new Error("Brand not found");
         setAwardsConfig(await res.json());
       } catch {
