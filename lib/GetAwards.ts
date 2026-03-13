@@ -48,28 +48,51 @@ async function safeFetch(url: string) {
 }
 
 /* ---------------- CITY DETECTION ---------------- */
-const KNOWN_CITIES = [
+const KNOWN_LOCATIONS = [
+  // Cities
   "Singapore", "Hong Kong", "Bangkok", "Manila", "Jakarta",
   "Kuala Lumpur", "Ho Chi Minh", "Hanoi", "Phnom Penh", "Yangon",
   "Taipei", "Seoul", "Tokyo", "Shanghai", "Beijing", "Shenzhen",
   "Mumbai", "New Delhi", "Dubai", "Sydney", "Melbourne",
   "Macau", "Cebu", "Davao", "Colombo", "Dhaka",
+  // Countries
+  "Malaysia", "Indonesia", "Thailand", "Philippines", "Vietnam",
+  "Cambodia", "Myanmar", "India", "Sri Lanka", "Bangladesh",
+  "Australia", "New Zealand", "Japan", "South Korea", "Taiwan",
+  "China", "UAE", "Saudi Arabia", "Qatar", "Bahrain", "Oman", "Kuwait",
+  // Regions
+  "Greater Bay Area",
 ];
 
-const KNOWN_REGIONS = [
-  "Asia Pacific", "Asia", "Southeast Asia", "ASEAN",
-  "Greater China", "South Asia", "Middle East",
-];
-
-function detectCity(title: string): string | null {
-  const lower = title.toLowerCase();
-  for (const city of KNOWN_CITIES) {
-    if (lower.includes(city.toLowerCase())) return city;
-  }
-  for (const region of KNOWN_REGIONS) {
-    if (lower.includes(region.toLowerCase())) return region;
+function matchLocation(text: string): string | null {
+  const lower = text.toLowerCase();
+  for (const loc of KNOWN_LOCATIONS) {
+    const regex = new RegExp(`\\b${loc.toLowerCase()}\\b`);
+    if (regex.test(lower)) return loc;
   }
   return null;
+}
+
+function detectCity(title: string, pageText?: string): string | null {
+  // 1. Try scraping page text for explicit venue mentions
+  if (pageText) {
+    const patterns = [
+      /(?:will be |is being )?held (?:at|in)\s+([^,.\n]{3,60})/i,
+      /takes place (?:at|in)\s+([^,.\n]{3,60})/i,
+      /ceremony (?:at|in)\s+([^,.\n]{3,60})/i,
+      /awards night (?:at|in)\s+([^,.\n]{3,60})/i,
+    ];
+    for (const pat of patterns) {
+      const m = pageText.match(pat);
+      if (m) {
+        const loc = matchLocation(m[1]);
+        if (loc) return loc;
+      }
+    }
+  }
+
+  // 2. Fall back to title
+  return matchLocation(title);
 }
 
 /* ---------------- CONTACT PERSON DETECTION ---------------- */
@@ -168,7 +191,7 @@ export async function getAwards(brands: Brand[], forceRefresh = false): Promise<
           ...award,
           startDate: $(".nomination-date .start-date").attr("date") || null,
           endDate: $(".nomination-date .end-date").attr("date") || null,
-          city: detectCity(award.title),
+          city: detectCity(award.title, pageText),
           contactPerson: detectContactPerson($, pageText),
         };
       } catch {
