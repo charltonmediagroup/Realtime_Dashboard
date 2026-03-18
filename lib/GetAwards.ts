@@ -130,13 +130,66 @@ async function processInBatches<T, R>(
 /* ---------------- CACHE ---------------- */
 let awardsCache: { data: Award[]; timestamp: number } | null = null;
 const CACHE_DURATION = 7 * 24 * 60 * 60 * 1000; // 1 week
+const MONGO_CACHE_UID = "awards-cache";
+let refreshInProgress = false;
+
+async function getCachedAwardsFromDB(): Promise<{ data: Award[]; timestamp: number } | null> {
+  try {
+    const { getCollection } = await import("@/lib/mongodb");
+    const col = await getCollection("dashboard-config");
+    const doc = await col.findOne({ uid: MONGO_CACHE_UID });
+    if (doc?.data && doc?.timestamp) {
+      return { data: doc.data as Award[], timestamp: doc.timestamp as number };
+    }
+  } catch (err) {
+    console.warn("Failed to read awards cache from MongoDB:", err);
+  }
+  return null;
+}
+
+async function saveCacheToDB(data: Award[]) {
+  try {
+    const { getCollection } = await import("@/lib/mongodb");
+    const col = await getCollection("dashboard-config");
+    await col.updateOne(
+      { uid: MONGO_CACHE_UID },
+      { $set: { uid: MONGO_CACHE_UID, data, timestamp: Date.now() } },
+      { upsert: true },
+    );
+  } catch (err) {
+    console.warn("Failed to save awards cache to MongoDB:", err);
+  }
+}
 
 /* ---------------- MAIN SCRAPER ---------------- */
 export async function getAwards(brands: Brand[], forceRefresh = false): Promise<Award[]> {
+  // 1. Return from in-memory cache if fresh
   if (!forceRefresh && awardsCache && Date.now() - awardsCache.timestamp < CACHE_DURATION) {
     return awardsCache.data;
   }
 
+  // 2. Try MongoDB cache for fast initial load
+  if (!forceRefresh) {
+    const dbCache = await getCachedAwardsFromDB();
+    if (dbCache && Date.now() - dbCache.timestamp < CACHE_DURATION) {
+      awardsCache = dbCache;
+      return dbCache.data;
+    }
+    // If DB cache exists but is stale, return it immediately and refresh in background
+    if (dbCache && dbCache.data.length > 0 && !refreshInProgress) {
+      awardsCache = dbCache;
+      refreshInProgress = true;
+      scrapeAndCache(brands).finally(() => { refreshInProgress = false; });
+      return dbCache.data;
+    }
+  }
+
+  // 3. No cache available — scrape synchronously
+  return scrapeAndCache(brands);
+}
+
+/* ---------------- SCRAPE & CACHE ---------------- */
+async function scrapeAndCache(brands: Brand[]): Promise<Award[]> {
   // 1. Fetch JSON lists for all brands (lightweight, parallel is fine)
   const awardsRawArr = await Promise.all(
     brands.map(async (b) => {
@@ -218,6 +271,7 @@ export async function getAwards(brands: Brand[], forceRefresh = false): Promise<
   });
 
   awardsCache = { data: awardsWithImages, timestamp: Date.now() };
+  saveCacheToDB(awardsWithImages);
   return awardsWithImages;
 }
 

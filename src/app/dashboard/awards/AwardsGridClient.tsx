@@ -93,8 +93,8 @@ export default function AwardsGridClient({ awards }: AwardsGridProps) {
   const scrollable = count > 10;
   const effectiveCount = Math.min(count, 10); // cap sizing at 10 for readability
   const rowHeight = Math.floor(85 / effectiveCount);
-  const fontSize = `clamp(0.9rem, calc(0.4vw + ${5 / effectiveCount}vw), 3.5rem)`;
-  const headerSize = `clamp(0.85rem, calc(0.4vw + ${4.5 / effectiveCount}vw), 3rem)`;
+  const fontSize = `clamp(1.1rem, calc(0.6vw + ${6 / effectiveCount}vw), 4rem)`;
+  const headerSize = `clamp(1rem, calc(0.6vw + ${5.5 / effectiveCount}vw), 3.5rem)`;
   const imgSize = Math.max(48, Math.min(180, 500 / effectiveCount));
 
   // Reset to first page when page size changes
@@ -146,10 +146,10 @@ export default function AwardsGridClient({ awards }: AwardsGridProps) {
         <table className={`w-full border-collapse table-fixed ${scrollable ? "" : "h-full"}`} style={{ fontSize }}>
           <thead>
             <tr className="bg-white text-center font-semibold" style={{ fontSize: headerSize }}>
-              <th className="p-2 w-[46%]">Awards</th>
-              <th className="p-2 w-[16%]">Awards Night</th>
-              <th className="p-2 w-[20%]">Awards Night Starts In</th>
-              <th className="p-2 w-[18%]">Submission Close In</th>
+              <th className="p-2 w-[52%]">Awards</th>
+              <th className="p-2 w-[14%]">Awards Night</th>
+              <th className="p-2 w-[18%]">Awards Night Starts In</th>
+              <th className="p-2 w-[16%]">Submission Close In</th>
             </tr>
           </thead>
 
