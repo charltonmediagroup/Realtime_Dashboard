@@ -143,15 +143,7 @@ export default function AwardsGridClient({ awards }: AwardsGridProps) {
         if (showControls) hideTimer.current = setTimeout(() => setShowControls(false), 5000);
       }}
     >
-      {/* ---- HEADER BAR ---- */}
-      <div className="flex items-center justify-between px-6 py-4 mb-3" style={{ fontSize: `calc(${headerSize} * 1.8)` }}>
-        <div className="flex items-center gap-3 text-white font-bold uppercase tracking-wider">
-          <span>Awards</span>
-        </div>
-        <div className="text-white font-mono text-right">
-          {new Date().toLocaleDateString(undefined, { weekday: "long", year: "numeric", month: "long", day: "numeric" })}
-        </div>
-      </div>
+
 
       {/* ---- DESKTOP TABLE ---- */}
       <div className="hidden md:flex flex-col flex-1 min-h-0">
