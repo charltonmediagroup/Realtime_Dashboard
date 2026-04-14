@@ -62,7 +62,7 @@ export default function AwardsGridClient({ awards }: AwardsGridProps) {
   const now = new Date();
   const tableRef = useRef<HTMLDivElement>(null);
   const hideTimer = useRef<NodeJS.Timeout | null>(null);
-  const PAGE_OPTIONS = [5, 10, 20];
+  const PAGE_OPTIONS = [6, 8, 12];
   const ROTATION_OPTIONS = [
     { label: "Pause", value: 0 },
     { label: "30 seconds", value: 30_000 },
@@ -70,7 +70,7 @@ export default function AwardsGridClient({ awards }: AwardsGridProps) {
     { label: "2 minutes", value: 120_000 },
     { label: "5 minutes", value: 300_000 },
   ];
-  const [pageSize, setPageSize] = useState(5);
+  const [pageSize, setPageSize] = useState(6);
   const [pageIndex, setPageIndex] = useState(0);
   const [rotationInterval, setRotationInterval] = useState(60_000);
   const [showControls, setShowControls] = useState(false);
@@ -90,12 +90,12 @@ export default function AwardsGridClient({ awards }: AwardsGridProps) {
 
   // Dynamic sizing — font uses vw (width-based), row height uses vh
   const count = Math.max(displayedAwards.length, pageSize) || 1;
-  const scrollable = count > 10;
-  const effectiveCount = Math.min(count, 10); // cap sizing at 10 for readability
+  const scrollable = count > 12;
+  const effectiveCount = Math.min(count, 12); // cap sizing at 12 for readability
   const rowHeight = Math.floor(85 / effectiveCount);
-  const fontSize = `clamp(1.1rem, calc(0.6vw + ${6 / effectiveCount}vw), 4rem)`;
-  const headerSize = `clamp(1rem, calc(0.6vw + ${5.5 / effectiveCount}vw), 3.5rem)`;
-  const imgSize = Math.max(48, Math.min(180, 500 / effectiveCount));
+  const fontSize = `clamp(0.9rem, calc(0.5vw + ${5 / effectiveCount}vw), 3.5rem)`;
+  const headerSize = `clamp(0.85rem, calc(0.5vw + ${4.5 / effectiveCount}vw), 3rem)`;
+  const imgSize = Math.max(36, Math.min(160, 450 / effectiveCount));
 
   // Reset to first page when page size changes
   const handlePageSizeChange = (size: number) => {
@@ -173,7 +173,7 @@ export default function AwardsGridClient({ awards }: AwardsGridProps) {
                     <div className="text-left">
                       <span className="uppercase" dangerouslySetInnerHTML={{ __html: award.title }} />
                       {(award.city || award.contactPerson) && (
-                        <p className="text-gray-500 uppercase" style={{ fontSize: `clamp(0.45rem, ${3.5 / count}vw, 1.3rem)` }}>
+                        <p className="text-gray-500 uppercase" style={{ fontSize: `clamp(0.4rem, ${3 / count}vw, 1.1rem)` }}>
                           {[award.city, award.contactPerson].filter(Boolean).join(" | ")}
                         </p>
                       )}
@@ -200,7 +200,7 @@ export default function AwardsGridClient({ awards }: AwardsGridProps) {
         {displayedAwards.map((award, idx) => (
           <div key={award.id || idx} className="text-center bg-gray-100 p-3 rounded-md flex-1 flex flex-col justify-center" style={{ fontSize }}>
             {/* Award Title + Image */}
-            <div className="flex flex-col items-center gap-2 p-2 font-bold" style={{ fontSize: `clamp(0.9rem, ${4.5 / count}vw, 2.5rem)` }}>
+            <div className="flex flex-col items-center gap-2 p-2 font-bold" style={{ fontSize: `clamp(0.8rem, ${4 / count}vw, 2.2rem)` }}>
               {award.image && (
                 <Image
                   src={award.image}

@@ -19,7 +19,7 @@ async function AwardsContent({ forceRefresh }: { forceRefresh: boolean }) {
     .filter(([, site]) => site?.awards && site?.url)
     .map(([brand, site]) => ({ brand, name: site.name ?? brand, url: site.url! }));
 
-  const awards = await getAwards(brands, forceRefresh);
+  const awards = await getAwards(brands);
   return <AwardsGridClient awards={awards} />;
 }
 
