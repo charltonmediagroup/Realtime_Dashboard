@@ -132,7 +132,7 @@ export default function AwardsGridClient({ awards }: AwardsGridProps) {
 
   return (
     <div
-      className={`flex flex-col justify-center h-screen py-16 px-4 md:px-16 bg-white text-black ${scrollable ? "overflow-y-auto" : "overflow-hidden"}`}
+      className={`flex flex-col justify-center h-screen py-4 px-2 md:px-6 bg-white text-black ${scrollable ? "overflow-y-auto" : "overflow-hidden"}`}
       ref={tableRef}
       onClick={(e) => {
         if (e.clientY > window.innerHeight * 0.75) setShowControls(prev => !prev);
@@ -145,19 +145,19 @@ export default function AwardsGridClient({ awards }: AwardsGridProps) {
       <div className="hidden md:flex flex-col flex-1 min-h-0">
         <table className={`w-full border-collapse table-fixed ${scrollable ? "" : "h-full"}`} style={{ fontSize }}>
           <thead>
-            <tr className="bg-white text-center font-semibold" style={{ fontSize: headerSize }}>
-              <th className="p-2 w-[52%]">Awards</th>
-              <th className="p-2 w-[14%]">Awards Night</th>
-              <th className="p-2 w-[18%]">Awards Night Starts In</th>
-              <th className="p-2 w-[16%]">Submission Close In</th>
+            <tr className="bg-white text-center font-semibold uppercase" style={{ fontSize: headerSize }}>
+              <th className="px-3 py-2 w-[52%]">Awards</th>
+              <th className="px-3 py-2 w-[14%]">Awards Night</th>
+              <th className="px-3 py-2 w-[18%]">Starts In</th>
+              <th className="px-3 py-2 w-[16%]">Submission Close In</th>
             </tr>
           </thead>
 
           <tbody>
             {displayedAwards.map((award, idx) => (
-              <tr key={award.id || idx} className="text-center border-b border-gray-100" style={{ height: `${rowHeight}vh` }}>
+              <tr key={award.id || idx} className={`text-center border-b border-gray-100 ${idx % 2 === 1 ? "bg-gray-100" : "bg-white"}`} style={{ height: `${rowHeight}vh`, maxHeight: "12vh" }}>
                 {/* Award Title + Image */}
-                <td className="p-2">
+                <td className="px-3 py-2">
                   <div className="flex items-center gap-3 justify-start">
                     {award.image && (
                       <Image
@@ -182,15 +182,15 @@ export default function AwardsGridClient({ awards }: AwardsGridProps) {
                 </td>
 
                 {/* Awards Night Date */}
-                <td className="p-2 uppercase">{formatDate(award.field_date)}</td>
+                <td className="px-3 py-2 uppercase">{formatDate(award.field_date)}</td>
 
                 {/* Awards Night Countdown */}
-                <td className="p-2">
+                <td className="px-3 py-2">
                   <Countdown target={award.field_date} done="Awards Ended" />
                 </td>
 
                 {/* Submission Close */}
-                <td className="p-2">{getSubmissionClose(award.endDate)}</td>
+                <td className="px-3 py-2">{getSubmissionClose(award.endDate)}</td>
               </tr>
             ))}
           </tbody>
