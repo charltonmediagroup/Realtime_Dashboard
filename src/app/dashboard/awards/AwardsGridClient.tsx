@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
-import Countdown from "@/src/components/Countdown";
 
 export interface Award {
   id: string;
@@ -21,40 +20,38 @@ interface AwardsGridProps {
   awards: Award[];
 }
 
-function formatDate(dateStr?: string) {
+/* ---------- Days helpers ---------- */
+function daysUntil(dateStr?: string | null): string {
   if (!dateStr) return "";
-  return new Date(dateStr).toLocaleDateString(undefined, {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  });
+  const diff = new Date(dateStr).getTime() - Date.now();
+  if (diff <= 0) return "ENDED";
+  const days = Math.ceil(diff / 86400000);
+  return `${days}`;
 }
 
-/* ---------- Submission Status Helpers ---------- */
-function getSubmissionOpen(startDate?: string | null) {
-  if (!startDate) return "Submission Closed";
-
-  const now = new Date();
-  const start = new Date(startDate);
-
-  if (start > now) {
-    return <Countdown target={startDate} done="Submission Open" />;
-  }
-
-  return "Submission Open";
+function nominationCloseDays(endDate?: string | null): string {
+  if (!endDate) return "CLOSED";
+  const diff = new Date(endDate).getTime() - Date.now();
+  if (diff <= 0) return "CLOSED";
+  const days = Math.ceil(diff / 86400000);
+  return `${days}`;
 }
 
-function getSubmissionClose(endDate?: string | null) {
-  if (!endDate) return "Submission Closed";
+function isNominationUrgent(endDate?: string | null): boolean {
+  if (!endDate) return false;
+  const diff = new Date(endDate).getTime() - Date.now();
+  if (diff <= 0) return false;
+  return Math.ceil(diff / 86400000) < 30;
+}
 
-  const now = new Date();
-  const end = new Date(endDate);
-
-  if (end > now) {
-    return <Countdown target={endDate} done="Submission Closed" />;
-  }
-
-  return "Submission Closed";
+/* Green-to-red color based on days remaining (green=many days, red=few/ended) */
+function daysColor(value: string): string {
+  if (value === "ENDED" || value === "CLOSED") return "#ef4444";
+  const days = parseInt(value, 10);
+  if (isNaN(days)) return "#ffffff";
+  if (days > 60) return "#22c55e";
+  if (days > 30) return "#eab308";
+  return "#ef4444";
 }
 
 /* ---------- Component ---------- */
@@ -62,7 +59,7 @@ export default function AwardsGridClient({ awards }: AwardsGridProps) {
   const now = new Date();
   const tableRef = useRef<HTMLDivElement>(null);
   const hideTimer = useRef<NodeJS.Timeout | null>(null);
-  const PAGE_OPTIONS = [6, 8, 12];
+  const PAGE_OPTIONS = [5, 6, 8, 12];
   const ROTATION_OPTIONS = [
     { label: "Pause", value: 0 },
     { label: "30 seconds", value: 30_000 },
@@ -70,7 +67,7 @@ export default function AwardsGridClient({ awards }: AwardsGridProps) {
     { label: "2 minutes", value: 120_000 },
     { label: "5 minutes", value: 300_000 },
   ];
-  const [pageSize, setPageSize] = useState(6);
+  const [pageSize, setPageSize] = useState(5);
   const [pageIndex, setPageIndex] = useState(0);
   const [rotationInterval, setRotationInterval] = useState(60_000);
   const [showControls, setShowControls] = useState(false);
@@ -88,12 +85,15 @@ export default function AwardsGridClient({ awards }: AwardsGridProps) {
   const totalPages = Math.ceil(upcomingAwards.length / pageSize);
   const displayedAwards = upcomingAwards.slice(pageIndex * pageSize, (pageIndex + 1) * pageSize);
 
+  // Pad to pageSize so row count stays fixed
+  const rows: (Award | null)[] = [...displayedAwards];
+  while (rows.length < pageSize) rows.push(null);
+
   // Dynamic sizing — font uses vw (width-based), row height uses vh
-  const count = Math.max(displayedAwards.length, pageSize) || 1;
-  const scrollable = count > 12;
-  const effectiveCount = Math.min(count, 12); // cap sizing at 12 for readability
-  const rowHeight = Math.floor(85 / effectiveCount);
-  const fontSize = `clamp(0.9rem, calc(0.5vw + ${5 / effectiveCount}vw), 3.5rem)`;
+  const count = pageSize || 1;
+  const effectiveCount = Math.min(count, 12);
+  const rowHeight = Math.floor(70 / effectiveCount);
+  const fontSize = `clamp(1.3rem, calc(0.8vw + ${7.5 / effectiveCount}vw), 4.5rem)`;
   const headerSize = `clamp(0.85rem, calc(0.5vw + ${4.5 / effectiveCount}vw), 3rem)`;
   const imgSize = Math.max(36, Math.min(160, 450 / effectiveCount));
 
@@ -132,7 +132,8 @@ export default function AwardsGridClient({ awards }: AwardsGridProps) {
 
   return (
     <div
-      className={`flex flex-col justify-center h-screen py-4 px-2 md:px-6 bg-white text-black ${scrollable ? "overflow-y-auto" : "overflow-hidden"}`}
+      className={`flex flex-col justify-center h-screen pt-4 pb-8 px-2 md:px-6 overflow-hidden`}
+      style={{ backgroundColor: "#0a1628" }}
       ref={tableRef}
       onClick={(e) => {
         if (e.clientY > window.innerHeight * 0.75) setShowControls(prev => !prev);
@@ -142,104 +143,138 @@ export default function AwardsGridClient({ awards }: AwardsGridProps) {
         if (showControls) hideTimer.current = setTimeout(() => setShowControls(false), 5000);
       }}
     >
+      {/* ---- HEADER BAR ---- */}
+      <div className="flex items-center justify-between px-6 py-4 mb-3" style={{ fontSize: `calc(${headerSize} * 1.8)` }}>
+        <div className="flex items-center gap-3 text-white font-bold uppercase tracking-wider">
+          <span>Awards</span>
+        </div>
+        <div className="text-white font-mono text-right">
+          {new Date().toLocaleDateString(undefined, { weekday: "long", year: "numeric", month: "long", day: "numeric" })}
+        </div>
+      </div>
+
+      {/* ---- DESKTOP TABLE ---- */}
       <div className="hidden md:flex flex-col flex-1 min-h-0">
-        <table className={`w-full border-collapse table-fixed ${scrollable ? "" : "h-full"}`} style={{ fontSize }}>
+        <table className="w-full border-collapse table-fixed h-full" style={{ fontSize }}>
           <thead>
-            <tr className="bg-white text-center font-semibold uppercase" style={{ fontSize: headerSize }}>
-              <th className="px-3 py-2 w-[52%]">Awards</th>
-              <th className="px-3 py-2 w-[14%]">Awards Night</th>
-              <th className="px-3 py-2 w-[18%]">Starts In</th>
-              <th className="px-3 py-2 w-[16%]">Submission Close In</th>
+            <tr className="text-center font-semibold uppercase text-white" style={{ fontSize: headerSize, backgroundColor: "#1a3a6e", borderBottom: "6px solid #0a1628" }}>
+              <th className="px-3 py-3 w-[8%]"></th>
+              <th className="px-3 py-3 w-[36%] text-left">Award Name</th>
+              <th className="px-3 py-3 w-[14%]">City</th>
+              <th className="px-3 py-3 w-[14%]">PIC</th>
+              <th className="px-3 py-3 w-[14%]">Days to Awards</th>
+              <th className="px-3 py-3 w-[14%]">Nom. Close Days</th>
             </tr>
           </thead>
 
           <tbody>
-            {displayedAwards.map((award, idx) => (
-              <tr key={award.id || idx} className={`text-center border-b border-gray-100 ${idx % 2 === 1 ? "bg-gray-100" : "bg-white"}`} style={{ height: `${rowHeight}vh`, maxHeight: "12vh" }}>
-                {/* Award Title + Image */}
-                <td className="px-3 py-2">
-                  <div className="flex items-center gap-3 justify-start">
-                    {award.image && (
+            {rows.map((award, idx) => (
+              <tr
+                key={award ? (award.id || idx) : `empty-${idx}`}
+                className="text-center uppercase"
+                style={{
+                  height: `${rowHeight}vh`,
+                  maxHeight: "12vh",
+                  backgroundColor: idx % 2 === 0 ? "#0f2247" : "#162d5a",
+                  color: "#ffffff",
+                  borderBottom: "1px solid #1a3a6e",
+                }}
+              >
+                {/* Logo */}
+                <td className="px-2 py-1">
+                  {award?.image && (
+                    <div className="flex items-center justify-center">
                       <Image
                         src={award.image}
                         alt={award.title}
                         width={imgSize * 2}
                         height={imgSize}
-                        className="object-contain flex-shrink-0 rounded-md"
+                        className="object-contain flex-shrink-0 rounded bg-white"
                         style={{ height: imgSize, width: "auto", maxWidth: imgSize * 2 }}
                         unoptimized
                       />
-                    )}
-                    <div className="text-left">
-                      <span className="uppercase" dangerouslySetInnerHTML={{ __html: award.title }} />
-                      {(award.city || award.contactPerson) && (
-                        <p className="text-gray-500 uppercase" style={{ fontSize: `clamp(0.4rem, ${3 / count}vw, 1.1rem)` }}>
-                          {[award.city, award.contactPerson].filter(Boolean).join(" | ")}
-                        </p>
-                      )}
                     </div>
-                  </div>
+                  )}
                 </td>
 
-                {/* Awards Night Date */}
-                <td className="px-3 py-2 uppercase">{formatDate(award.field_date)}</td>
-
-                {/* Awards Night Countdown */}
-                <td className="px-3 py-2">
-                  <Countdown target={award.field_date} done="Awards Ended" />
+                {/* Award Name */}
+                <td className="px-2 py-1 text-left">
+                  {award && <span className="line-clamp-2" dangerouslySetInnerHTML={{ __html: award.title }} />}
                 </td>
 
-                {/* Submission Close */}
-                <td className="px-3 py-2">{getSubmissionClose(award.endDate)}</td>
+                {/* City */}
+                <td className="px-2 py-1">
+                  {award?.city || ""}
+                </td>
+
+                {/* Person in Charge */}
+                <td className="px-2 py-1">
+                  {award?.contactPerson?.split(" ")[0] || ""}
+                </td>
+
+                {/* Days to Awards */}
+                <td className="px-2 py-1 font-mono font-bold" style={{ fontSize: "1.3em" }}>
+                  {award && (() => { const v = daysUntil(award.field_date); return <span style={{ color: daysColor(v) }}>{v}</span>; })()}
+                </td>
+
+                {/* Nomination Close Days */}
+                <td className="px-2 py-1 font-mono font-bold" style={{ fontSize: "1.3em" }}>
+                  {award && (() => { const v = nominationCloseDays(award.endDate); return <span className={isNominationUrgent(award.endDate) ? "animate-flash" : ""} style={{ color: daysColor(v) }}>{v}</span>; })()}
+                </td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
+
+      {/* ---- MOBILE CARDS ---- */}
       <div className="flex flex-col md:hidden flex-1 min-h-0 gap-2 overflow-y-auto">
-        {displayedAwards.map((award, idx) => (
-          <div key={award.id || idx} className="text-center bg-gray-100 p-3 rounded-md flex-1 flex flex-col justify-center" style={{ fontSize }}>
-            {/* Award Title + Image */}
-            <div className="flex flex-col items-center gap-2 p-2 font-bold" style={{ fontSize: `clamp(0.8rem, ${4 / count}vw, 2.2rem)` }}>
-              {award.image && (
-                <Image
-                  src={award.image}
-                  alt={award.title}
-                  width={imgSize * 2}
-                  height={imgSize}
-                  className="object-contain rounded-md"
-                  style={{ height: imgSize, width: "auto", maxWidth: imgSize * 2 }}
-                  unoptimized
-                />
-              )}
-              <span className="uppercase" dangerouslySetInnerHTML={{ __html: award.title }} />
-              {(award.city || award.contactPerson) && (
-                <span className="uppercase text-gray-500" style={{ fontSize: `clamp(0.5rem, ${2 / count}vw, 1.2rem)` }}>
-                  {[award.city, award.contactPerson].filter(Boolean).join(" | ")}
-                </span>
-              )}
-            </div>
-            <div className="flex flex-col sm:flex-row">
-              <div className="flex justify-evenly flex-1">
-                {/* Awards Night Date */}
-                <div className="p-1 flex flex-col">
-                  <p className="text-gray-700" style={{ fontSize: `clamp(0.5rem, ${2 / count}vw, 1.2rem)` }}>Awards Night</p>
-                  <p className="uppercase">{formatDate(award.field_date)}</p>
+        {rows.map((award, idx) => (
+          <div
+            key={award ? (award.id || idx) : `empty-${idx}`}
+            className="text-center p-3 rounded-md flex-1 flex flex-col justify-center uppercase"
+            style={{ fontSize, backgroundColor: idx % 2 === 0 ? "#0f2247" : "#162d5a", color: "#ffffff" }}
+          >
+            {award ? (
+              <>
+                <div className="flex flex-col items-center gap-2 p-2 font-bold" style={{ fontSize: `clamp(0.8rem, ${4 / count}vw, 2.2rem)` }}>
+                  {award.image && (
+                    <Image
+                      src={award.image}
+                      alt={award.title}
+                      width={imgSize * 2}
+                      height={imgSize}
+                      className="object-contain rounded bg-white"
+                      style={{ height: imgSize, width: "auto", maxWidth: imgSize * 2 }}
+                      unoptimized
+                    />
+                  )}
+                  <span dangerouslySetInnerHTML={{ __html: award.title }} />
                 </div>
-                {/* Awards Night Countdown */}
-                <div className="p-1">
-                  <p className="text-gray-700" style={{ fontSize: `clamp(0.5rem, ${2 / count}vw, 1.2rem)` }}>Awards Night Starts In</p>
-                  <p><Countdown target={award.field_date} done="Awards Ended" /></p>
+                <div className="flex flex-col sm:flex-row">
+                  <div className="flex justify-evenly flex-1">
+                    <div className="p-1 flex flex-col">
+                      <p style={{ fontSize: `clamp(0.5rem, ${2 / count}vw, 1.2rem)`, color: "#94a3b8" }}>City</p>
+                      <p>{award.city || ""}</p>
+                    </div>
+                    <div className="p-1 flex flex-col">
+                      <p style={{ fontSize: `clamp(0.5rem, ${2 / count}vw, 1.2rem)`, color: "#94a3b8" }}>PIC</p>
+                      <p>{award.contactPerson?.split(" ")[0] || ""}</p>
+                    </div>
+                  </div>
+                  <div className="flex justify-evenly flex-1">
+                    <div className="p-1 flex flex-col">
+                      <p style={{ fontSize: `clamp(0.5rem, ${2 / count}vw, 1.2rem)`, color: "#94a3b8" }}>Days to Awards</p>
+                      <p className="font-mono" style={{ color: "#fbbf24" }}>{daysUntil(award.field_date)}</p>
+                    </div>
+                    <div className="p-1 flex flex-col">
+                      <p style={{ fontSize: `clamp(0.5rem, ${2 / count}vw, 1.2rem)`, color: "#94a3b8" }}>Nom. Close Days</p>
+                      <p className="font-mono" style={{ color: "#fbbf24" }}>{nominationCloseDays(award.endDate)}</p>
+                    </div>
+                  </div>
                 </div>
-              </div>
-              <div className="flex justify-evenly flex-1">
-                {/* Submission Close */}
-                <div className="p-1">
-                  <p className="text-gray-700" style={{ fontSize: `clamp(0.5rem, ${2 / count}vw, 1.2rem)` }}>Submission Close In</p>
-                  <p>{getSubmissionClose(award.endDate)}</p>
-                </div>
-              </div>
-            </div>
+              </>
+            ) : null}
           </div>
         ))}
       </div>
