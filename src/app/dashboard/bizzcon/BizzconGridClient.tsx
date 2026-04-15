@@ -70,10 +70,16 @@ export default function BizzconGridClient({ events }: BizzconGridProps) {
   const rotationTimer = useRef<NodeJS.Timeout | null>(null);
   const touchStartX = useRef<number | null>(null);
 
-  const upcomingEvents = useMemo(
-    () => events.filter((e) => new Date(e.eventDate) > now),
-    [events],
-  );
+  const upcomingEvents = useMemo(() => {
+    const filtered = events.filter((e) => new Date(e.eventDate) > now);
+    const seen = new Set<string>();
+    return filtered.filter((e) => {
+      const key = `${e.title.toLowerCase().trim()}|${(e.city || "").toLowerCase().trim()}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  }, [events]);
 
   const totalPages = Math.ceil(upcomingEvents.length / pageSize);
   const displayedEvents = upcomingEvents.slice(pageIndex * pageSize, (pageIndex + 1) * pageSize);
@@ -86,10 +92,10 @@ export default function BizzconGridClient({ events }: BizzconGridProps) {
   const rowHeight = Math.floor(70 / effectiveCount);
   const fontSize = `clamp(1.3rem, calc(0.8vw + ${7.5 / effectiveCount}vw), 4.5rem)`;
   const headerSize = `clamp(0.85rem, calc(0.5vw + ${4.5 / effectiveCount}vw), 3rem)`;
-  const imgSize = Math.max(36, Math.min(160, 450 / effectiveCount));
+  const imgSize = Math.max(88, Math.min(320, 1050 / effectiveCount));
   const mFontSize = `clamp(0.8rem, calc(1.2vw + ${9 / effectiveCount}vw), 4.5rem)`;
   const mHeaderSize = `clamp(0.65rem, calc(0.8vw + ${6 / effectiveCount}vw), 3rem)`;
-  const mImgSize = Math.max(12, Math.min(60, 200 / effectiveCount));
+  const mImgSize = Math.max(32, Math.min(130, 420 / effectiveCount));
 
   const handlePageSizeChange = (size: number) => {
     setPageSize(size);
@@ -123,7 +129,7 @@ export default function BizzconGridClient({ events }: BizzconGridProps) {
   return (
     <div
       className={`flex flex-col justify-center h-screen pt-4 pb-8 px-0 md:px-4 overflow-hidden`}
-      style={{ backgroundColor: "#0a1628" }}
+      style={{ backgroundColor: "#0a0a0a" }}
       ref={tableRef}
       onClick={(e) => {
         if (e.clientY > window.innerHeight * 0.75) setShowControls(prev => !prev);
@@ -148,12 +154,13 @@ export default function BizzconGridClient({ events }: BizzconGridProps) {
       <div className="hidden md:flex landscape-show flex-col flex-1 min-h-0">
         <table className="w-full border-collapse table-fixed h-full" style={{ fontSize }}>
           <thead>
-            <tr className="text-center font-semibold uppercase text-white" style={{ fontSize: headerSize, backgroundColor: "#1a3a6e", borderBottom: "6px solid #0a1628" }}>
-              <th className="px-2 py-3 w-[8%]"></th>
-              <th className="pl-0 pr-3 py-3 w-[52%] text-left">Event Name</th>
+            <tr className="text-center font-semibold uppercase text-white/90" style={{ fontSize: headerSize, backgroundColor: "#1a1a1a", letterSpacing: "0.12em" }}>
+              <th className="px-2 py-3 w-[14%]"></th>
+              <th className="pl-0 pr-3 py-3 w-[46%] text-left">Event Name</th>
               <th className="px-3 py-3 w-[24%]">City</th>
               <th className="px-3 py-3 w-[16%]">Days to Event</th>
             </tr>
+            <tr><td colSpan={4} style={{ padding: 0, height: "2px", background: "linear-gradient(90deg, #d4a853, transparent)" }} /></tr>
           </thead>
           <tbody>
             {rows.map((evt, idx) => (
@@ -163,13 +170,13 @@ export default function BizzconGridClient({ events }: BizzconGridProps) {
                 style={{
                   height: `${rowHeight}vh`,
                   maxHeight: "12vh",
-                  backgroundColor: idx % 2 === 0 ? "#0f2247" : "#162d5a",
+                  background: idx % 2 === 0 ? "linear-gradient(90deg, #111111, #151515)" : "linear-gradient(90deg, #1a1a1a, #1e1e1e)",
                   color: "#ffffff",
-                  borderBottom: "1px solid #1a3a6e",
+                  borderBottom: "0.5px solid #222",
                 }}
               >
-                <td className="px-2 py-1">
-                  <div className="flex items-center justify-center mx-auto" style={{ width: imgSize, height: imgSize }}>
+                <td className="px-2 py-1" style={{ height: `${rowHeight}vh` }}>
+                  <div className="flex items-center justify-center mx-auto h-full" style={{ maxWidth: imgSize, maxHeight: "100%" }}>
                     {evt?.image && (
                       <Image
                         src={evt.image}
@@ -183,12 +190,12 @@ export default function BizzconGridClient({ events }: BizzconGridProps) {
                     )}
                   </div>
                 </td>
-                <td className="pl-0 pr-2 py-1 text-left">
+                <td className="pl-0 pr-2 py-1 text-left" style={{ fontWeight: 300 }}>
                   {evt && <span className="line-clamp-2" dangerouslySetInnerHTML={{ __html: evt.title }} />}
                 </td>
-                <td className="px-2 py-1">{evt?.city || ""}</td>
+                <td className="px-2 py-1" style={{ fontWeight: 300 }}>{evt?.city || ""}</td>
                 <td className="px-2 py-1 font-mono font-bold" style={{ fontSize: "1.5em" }}>
-                  {evt && (() => { const v = daysUntil(evt.eventDate); return <span className={isEventUrgent(evt.eventDate) ? "animate-flash" : ""} style={{ color: daysColor(v) }}>{v}</span>; })()}
+                  {evt && (() => { const v = daysUntil(evt.eventDate); const c = daysColor(v); return <span className={isEventUrgent(evt.eventDate) ? "animate-flash" : ""} style={{ color: c, textShadow: `0 0 8px ${c}40, 0 0 20px ${c}20` }}>{v}</span>; })()}
                 </td>
               </tr>
             ))}
@@ -200,11 +207,12 @@ export default function BizzconGridClient({ events }: BizzconGridProps) {
       <div className="flex md:hidden landscape-hide flex-col flex-1 min-h-0">
         <table className="w-full border-collapse table-fixed h-full" style={{ fontSize: mFontSize }}>
           <thead>
-            <tr className="text-center font-semibold uppercase text-white" style={{ fontSize: mHeaderSize, backgroundColor: "#1a3a6e", borderBottom: "6px solid #0a1628" }}>
+            <tr className="text-center font-semibold uppercase text-white/90" style={{ fontSize: mHeaderSize, backgroundColor: "#1a1a1a", letterSpacing: "0.12em" }}>
               <th className="px-1 py-2 w-[45%]">Event</th>
               <th className="px-1 py-2 w-[25%]">City</th>
               <th className="px-1 py-2 pr-4 w-[30%]">Days to Event</th>
             </tr>
+            <tr><td colSpan={3} style={{ padding: 0, height: "2px", background: "linear-gradient(90deg, #d4a853, transparent)" }} /></tr>
           </thead>
           <tbody>
             {rows.map((evt, idx) => (
@@ -214,12 +222,12 @@ export default function BizzconGridClient({ events }: BizzconGridProps) {
                 style={{
                   height: `${rowHeight}vh`,
                   maxHeight: "12vh",
-                  backgroundColor: idx % 2 === 0 ? "#0f2247" : "#162d5a",
+                  background: idx % 2 === 0 ? "linear-gradient(90deg, #111111, #151515)" : "linear-gradient(90deg, #1a1a1a, #1e1e1e)",
                   color: "#ffffff",
-                  borderBottom: "1px solid #1a3a6e",
+                  borderBottom: "0.5px solid #222",
                 }}
               >
-                <td className="px-1 py-1 text-center">
+                <td className="px-1 py-1 text-center" style={{ fontWeight: 300 }}>
                   {evt && (
                     <div className="flex flex-col items-center gap-1">
                       {evt.image && (
@@ -237,11 +245,11 @@ export default function BizzconGridClient({ events }: BizzconGridProps) {
                     </div>
                   )}
                 </td>
-                <td className="px-1 py-1">
+                <td className="px-1 py-1" style={{ fontWeight: 300 }}>
                   {evt?.city || ""}
                 </td>
                 <td className="px-1 py-1 pr-4 font-mono font-bold" style={{ fontSize: "1.5em" }}>
-                  {evt && (() => { const v = daysUntil(evt.eventDate); return <span className={isEventUrgent(evt.eventDate) ? "animate-flash" : ""} style={{ color: daysColor(v), fontSize: v === "ENDED" ? "0.75em" : undefined }}>{v}</span>; })()}
+                  {evt && (() => { const v = daysUntil(evt.eventDate); const c = daysColor(v); return <span className={isEventUrgent(evt.eventDate) ? "animate-flash" : ""} style={{ color: c, textShadow: `0 0 8px ${c}40, 0 0 20px ${c}20`, fontSize: v === "ENDED" ? "0.75em" : undefined }}>{v}</span>; })()}
                 </td>
               </tr>
             ))}

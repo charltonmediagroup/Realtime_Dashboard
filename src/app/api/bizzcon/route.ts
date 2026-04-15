@@ -16,11 +16,16 @@ export async function GET(req: Request) {
       .filter(([, site]: any) => site?.events && site?.url)
       .map(([brand, site]: any) => ({ brand, name: site.name ?? brand, url: site.url!, image: site.image }));
 
+    if (brands.length === 0) {
+      console.log("No brands with events configured");
+      return NextResponse.json([]);
+    }
+
     const allEvents = await getCachedEvents(brands, forceRefresh);
 
     return NextResponse.json(allEvents);
   } catch (err) {
     console.error("API /bizzcon failed:", err);
-    return NextResponse.json({ error: "Failed to fetch events" }, { status: 500 });
+    return NextResponse.json([], { status: 200 });
   }
 }

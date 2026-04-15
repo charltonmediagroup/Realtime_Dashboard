@@ -31,15 +31,26 @@ function normalizeTitle(str?: string) {
 }
 
 async function safeFetch(url: string) {
-  const res = await fetch(url, {
-    headers: {
-      "User-Agent":
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120 Safari/537.36",
-    },
-    cache: "no-store",
-  });
-  if (!res.ok) throw new Error(`Failed fetch: ${url} (${res.status})`);
-  return res;
+  try {
+    const res = await fetch(url, {
+      headers: {
+        "User-Agent":
+          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120 Safari/537.36",
+      },
+      cache: "no-store",
+    });
+    if (!res.ok) {
+      throw new Error(`Failed fetch: ${url} (${res.status})`);
+    }
+    const contentType = res.headers.get("content-type") || "";
+    if (contentType.includes("application/xml") || contentType.includes("text/xml")) {
+      throw new Error(`Invalid content type for ${url}: ${contentType}`);
+    }
+    return res;
+  } catch (err) {
+    console.error(`Fetch error for ${url}:`, err);
+    throw err;
+  }
 }
 
 /* ---------------- CITY DETECTION ---------------- */
@@ -143,8 +154,8 @@ export async function getEvents(brands: EventBrand[]): Promise<BizzconEvent[]> {
         });
 
         return events;
-      } catch {
-        console.warn("Failed brand events:", b.brand);
+      } catch (err) {
+        console.warn(`Failed to fetch brand events for ${b.brand}:`, (err as Error).message);
         return [];
       }
     }),
