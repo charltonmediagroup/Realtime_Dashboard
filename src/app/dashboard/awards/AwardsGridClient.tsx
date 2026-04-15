@@ -67,7 +67,9 @@ export default function AwardsGridClient({ awards }: AwardsGridProps) {
     { label: "2 minutes", value: 120_000 },
     { label: "5 minutes", value: 300_000 },
   ];
-  const [pageSize, setPageSize] = useState(5);
+  const [pageSize, setPageSize] = useState(() =>
+    typeof window !== "undefined" && window.innerWidth < 768 ? 6 : 5,
+  );
   const [pageIndex, setPageIndex] = useState(0);
   const [rotationInterval, setRotationInterval] = useState(60_000);
   const [showControls, setShowControls] = useState(false);
@@ -75,6 +77,7 @@ export default function AwardsGridClient({ awards }: AwardsGridProps) {
     typeof document !== "undefined" && !!document.fullscreenElement,
   );
   const rotationTimer = useRef<NodeJS.Timeout | null>(null);
+  const touchStartX = useRef<number | null>(null);
 
   // Only upcoming awards (memoized – awards array is stable from server)
   const upcomingAwards = useMemo(
@@ -96,6 +99,9 @@ export default function AwardsGridClient({ awards }: AwardsGridProps) {
   const fontSize = `clamp(1.3rem, calc(0.8vw + ${7.5 / effectiveCount}vw), 4.5rem)`;
   const headerSize = `clamp(0.85rem, calc(0.5vw + ${4.5 / effectiveCount}vw), 3rem)`;
   const imgSize = Math.max(36, Math.min(160, 450 / effectiveCount));
+  const mFontSize = `clamp(0.8rem, calc(1.2vw + ${9 / effectiveCount}vw), 4.5rem)`;
+  const mHeaderSize = `clamp(0.65rem, calc(0.8vw + ${6 / effectiveCount}vw), 3rem)`;
+  const mImgSize = Math.max(12, Math.min(60, 200 / effectiveCount));
 
   // Reset to first page when page size changes
   const handlePageSizeChange = (size: number) => {
@@ -132,7 +138,7 @@ export default function AwardsGridClient({ awards }: AwardsGridProps) {
 
   return (
     <div
-      className={`flex flex-col justify-center h-screen pt-4 pb-8 px-2 md:px-6 overflow-hidden`}
+      className={`flex flex-col justify-center h-screen pt-4 pb-8 px-0 md:px-4 overflow-hidden`}
       style={{ backgroundColor: "#0a1628" }}
       ref={tableRef}
       onClick={(e) => {
@@ -141,6 +147,16 @@ export default function AwardsGridClient({ awards }: AwardsGridProps) {
       onMouseMove={() => {
         if (hideTimer.current) clearTimeout(hideTimer.current);
         if (showControls) hideTimer.current = setTimeout(() => setShowControls(false), 5000);
+      }}
+      onTouchStart={(e) => { touchStartX.current = e.touches[0].clientX; }}
+      onTouchEnd={(e) => {
+        if (touchStartX.current === null) return;
+        const diff = e.changedTouches[0].clientX - touchStartX.current;
+        if (Math.abs(diff) > 50) {
+          if (diff < 0) setPageIndex((i) => Math.min(totalPages - 1, i + 1));
+          else setPageIndex((i) => Math.max(0, i - 1));
+        }
+        touchStartX.current = null;
       }}
     >
 
@@ -158,7 +174,6 @@ export default function AwardsGridClient({ awards }: AwardsGridProps) {
               <th className="px-3 py-3 w-[14%]">Nom. Close Days</th>
             </tr>
           </thead>
-
           <tbody>
             {rows.map((award, idx) => (
               <tr
@@ -172,7 +187,6 @@ export default function AwardsGridClient({ awards }: AwardsGridProps) {
                   borderBottom: "1px solid #1a3a6e",
                 }}
               >
-                {/* Logo */}
                 <td className="px-2 py-1">
                   {award?.image && (
                     <div className="flex items-center justify-center">
@@ -188,29 +202,15 @@ export default function AwardsGridClient({ awards }: AwardsGridProps) {
                     </div>
                   )}
                 </td>
-
-                {/* Award Name */}
                 <td className="px-2 py-1 text-left">
                   {award && <span className="line-clamp-2" dangerouslySetInnerHTML={{ __html: award.title }} />}
                 </td>
-
-                {/* City */}
-                <td className="px-2 py-1">
-                  {award?.city || ""}
-                </td>
-
-                {/* Person in Charge */}
-                <td className="px-2 py-1">
-                  {award?.contactPerson?.split(" ")[0] || ""}
-                </td>
-
-                {/* Days to Awards */}
-                <td className="px-2 py-1 font-mono font-bold" style={{ fontSize: "1.3em" }}>
+                <td className="px-2 py-1">{award?.city || ""}</td>
+                <td className="px-2 py-1">{award?.contactPerson?.split(" ")[0] || ""}</td>
+                <td className="px-2 py-1 font-mono font-bold" style={{ fontSize: "1.5em" }}>
                   {award && (() => { const v = daysUntil(award.field_date); return <span style={{ color: daysColor(v) }}>{v}</span>; })()}
                 </td>
-
-                {/* Nomination Close Days */}
-                <td className="px-2 py-1 font-mono font-bold" style={{ fontSize: "1.3em" }}>
+                <td className="px-2 py-1 font-mono font-bold" style={{ fontSize: "1.5em" }}>
                   {award && (() => { const v = nominationCloseDays(award.endDate); return <span className={isNominationUrgent(award.endDate) ? "animate-flash" : ""} style={{ color: daysColor(v) }}>{v}</span>; })()}
                 </td>
               </tr>
@@ -219,57 +219,70 @@ export default function AwardsGridClient({ awards }: AwardsGridProps) {
         </table>
       </div>
 
-      {/* ---- MOBILE CARDS ---- */}
-      <div className="flex flex-col md:hidden flex-1 min-h-0 gap-2 overflow-y-auto">
-        {rows.map((award, idx) => (
-          <div
-            key={award ? (award.id || idx) : `empty-${idx}`}
-            className="text-center p-3 rounded-md flex-1 flex flex-col justify-center uppercase"
-            style={{ fontSize, backgroundColor: idx % 2 === 0 ? "#0f2247" : "#162d5a", color: "#ffffff" }}
-          >
-            {award ? (
-              <>
-                <div className="flex flex-col items-center gap-2 p-2 font-bold" style={{ fontSize: `clamp(0.8rem, ${4 / count}vw, 2.2rem)` }}>
-                  {award.image && (
-                    <Image
-                      src={award.image}
-                      alt={award.title}
-                      width={imgSize * 2}
-                      height={imgSize}
-                      className="object-contain rounded bg-white"
-                      style={{ height: imgSize, width: "auto", maxWidth: imgSize * 2 }}
-                      unoptimized
-                    />
+      {/* ---- MOBILE TABLE ---- */}
+      <div className="flex md:hidden flex-col flex-1 min-h-0">
+        <table className="w-full border-collapse table-fixed h-full" style={{ fontSize: mFontSize }}>
+          <thead>
+            <tr className="text-center font-semibold uppercase text-white" style={{ fontSize: mHeaderSize, backgroundColor: "#1a3a6e", borderBottom: "6px solid #0a1628" }}>
+              <th className="px-1 py-2 w-[42%]">Award</th>
+              <th className="px-1 py-2 w-[22%]">City / PIC</th>
+              <th className="px-1 py-2 w-[18%]">Days to Awards</th>
+              <th className="px-1 py-2 pr-4 w-[18%]">Nom. Close Days</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((award, idx) => (
+              <tr
+                key={award ? (award.id || idx) : `empty-m-${idx}`}
+                className="text-center uppercase"
+                style={{
+                  height: `${rowHeight}vh`,
+                  maxHeight: "12vh",
+                  backgroundColor: idx % 2 === 0 ? "#0f2247" : "#162d5a",
+                  color: "#ffffff",
+                  borderBottom: "1px solid #1a3a6e",
+                }}
+              >
+                <td className="px-1 py-1 text-center">
+                  {award && (
+                    <div className="flex flex-col items-center gap-1">
+                      {award.image && (
+                        <Image
+                          src={award.image}
+                          alt={award.title}
+                          width={mImgSize * 2}
+                          height={mImgSize}
+                          className="object-contain flex-shrink-0 rounded bg-white"
+                          style={{ height: mImgSize, width: "auto", maxWidth: mImgSize * 2 }}
+                          unoptimized
+                        />
+                      )}
+                      <span className="line-clamp-2" dangerouslySetInnerHTML={{ __html: award.title }} />
+                    </div>
                   )}
-                  <span dangerouslySetInnerHTML={{ __html: award.title }} />
-                </div>
-                <div className="flex flex-col sm:flex-row">
-                  <div className="flex justify-evenly flex-1">
-                    <div className="p-1 flex flex-col">
-                      <p style={{ fontSize: `clamp(0.5rem, ${2 / count}vw, 1.2rem)`, color: "#94a3b8" }}>City</p>
-                      <p>{award.city || ""}</p>
+                </td>
+                <td className="px-1 py-1">
+                  {award && (
+                    <div className="flex flex-col">
+                      <span>{award.city || ""}</span>
+                      {award.contactPerson && (
+                        <span className="text-gray-400" style={{ fontSize: "0.85em" }}>{award.contactPerson.split(" ")[0]}</span>
+                      )}
                     </div>
-                    <div className="p-1 flex flex-col">
-                      <p style={{ fontSize: `clamp(0.5rem, ${2 / count}vw, 1.2rem)`, color: "#94a3b8" }}>PIC</p>
-                      <p>{award.contactPerson?.split(" ")[0] || ""}</p>
-                    </div>
-                  </div>
-                  <div className="flex justify-evenly flex-1">
-                    <div className="p-1 flex flex-col">
-                      <p style={{ fontSize: `clamp(0.5rem, ${2 / count}vw, 1.2rem)`, color: "#94a3b8" }}>Days to Awards</p>
-                      <p className="font-mono" style={{ color: "#fbbf24" }}>{daysUntil(award.field_date)}</p>
-                    </div>
-                    <div className="p-1 flex flex-col">
-                      <p style={{ fontSize: `clamp(0.5rem, ${2 / count}vw, 1.2rem)`, color: "#94a3b8" }}>Nom. Close Days</p>
-                      <p className="font-mono" style={{ color: "#fbbf24" }}>{nominationCloseDays(award.endDate)}</p>
-                    </div>
-                  </div>
-                </div>
-              </>
-            ) : null}
-          </div>
-        ))}
+                  )}
+                </td>
+                <td className="px-1 py-1 font-mono font-bold" style={{ fontSize: "1.5em" }}>
+                  {award && (() => { const v = daysUntil(award.field_date); return <span style={{ color: daysColor(v) }}>{v}</span>; })()}
+                </td>
+                <td className="px-1 py-1 pr-4 font-mono font-bold" style={{ fontSize: "1.5em" }}>
+                  {award && (() => { const v = nominationCloseDays(award.endDate); return <span className={isNominationUrgent(award.endDate) ? "animate-flash" : ""} style={{ color: daysColor(v) }}>{v}</span>; })()}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
+
 
       {/* Hidden floating control bar – click bottom 25% to toggle */}
       {showControls && (
