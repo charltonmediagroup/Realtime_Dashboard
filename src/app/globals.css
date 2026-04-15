@@ -33,3 +33,9 @@ body {
 .animate-flash {
   animation: flash 1.5s ease-in-out infinite;
 }
+
+/* Show desktop table in landscape on mobile */
+@media (orientation: landscape) {
+  .landscape-show { display: flex !important; }
+  .landscape-hide { display: none !important; }
+}

@@ -3,21 +3,21 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 
-export interface Award {
+export interface BizzconEvent {
   id: string;
   brand: string;
   title: string;
-  field_date: string;
-  view_node: string;
-  startDate?: string | null;
-  endDate?: string | null;
+  eventDate: string;
+  link: string;
   image?: string;
   city?: string | null;
   contactPerson?: string | null;
+  venue?: string | null;
+  registrationUrl?: string | null;
 }
 
-interface AwardsGridProps {
-  awards: Award[];
+interface BizzconGridProps {
+  events: BizzconEvent[];
 }
 
 /* ---------- Days helpers ---------- */
@@ -29,24 +29,16 @@ function daysUntil(dateStr?: string | null): string {
   return `${days}`;
 }
 
-function nominationCloseDays(endDate?: string | null): string {
-  if (!endDate) return "CLOSED";
-  const diff = new Date(endDate).getTime() - Date.now();
-  if (diff <= 0) return "CLOSED";
-  const days = Math.ceil(diff / 86400000);
-  return `${days}`;
-}
-
-function isNominationUrgent(endDate?: string | null): boolean {
-  if (!endDate) return false;
-  const diff = new Date(endDate).getTime() - Date.now();
+function isEventUrgent(dateStr?: string | null): boolean {
+  if (!dateStr) return false;
+  const diff = new Date(dateStr).getTime() - Date.now();
   if (diff <= 0) return false;
   return Math.ceil(diff / 86400000) < 30;
 }
 
-/* Green-to-red color based on days remaining (green=many days, red=few/ended) */
+/* Green-to-red color based on days remaining */
 function daysColor(value: string): string {
-  if (value === "ENDED" || value === "CLOSED") return "#ef4444";
+  if (value === "ENDED") return "#ef4444";
   const days = parseInt(value, 10);
   if (isNaN(days)) return "#ffffff";
   if (days > 60) return "#22c55e";
@@ -55,7 +47,7 @@ function daysColor(value: string): string {
 }
 
 /* ---------- Component ---------- */
-export default function AwardsGridClient({ awards }: AwardsGridProps) {
+export default function BizzconGridClient({ events }: BizzconGridProps) {
   const now = new Date();
   const tableRef = useRef<HTMLDivElement>(null);
   const hideTimer = useRef<NodeJS.Timeout | null>(null);
@@ -79,20 +71,17 @@ export default function AwardsGridClient({ awards }: AwardsGridProps) {
   const rotationTimer = useRef<NodeJS.Timeout | null>(null);
   const touchStartX = useRef<number | null>(null);
 
-  // Only upcoming awards (memoized – awards array is stable from server)
-  const upcomingAwards = useMemo(
-    () => awards.filter((award) => new Date(award.field_date) > now),
-    [awards],
+  const upcomingEvents = useMemo(
+    () => events.filter((e) => new Date(e.eventDate) > now),
+    [events],
   );
 
-  const totalPages = Math.ceil(upcomingAwards.length / pageSize);
-  const displayedAwards = upcomingAwards.slice(pageIndex * pageSize, (pageIndex + 1) * pageSize);
+  const totalPages = Math.ceil(upcomingEvents.length / pageSize);
+  const displayedEvents = upcomingEvents.slice(pageIndex * pageSize, (pageIndex + 1) * pageSize);
 
-  // Pad to pageSize so row count stays fixed
-  const rows: (Award | null)[] = [...displayedAwards];
+  const rows: (BizzconEvent | null)[] = [...displayedEvents];
   while (rows.length < pageSize) rows.push(null);
 
-  // Dynamic sizing — font uses vw (width-based), row height uses vh
   const count = pageSize || 1;
   const effectiveCount = Math.min(count, 12);
   const rowHeight = Math.floor(70 / effectiveCount);
@@ -103,20 +92,17 @@ export default function AwardsGridClient({ awards }: AwardsGridProps) {
   const mHeaderSize = `clamp(0.65rem, calc(0.8vw + ${6 / effectiveCount}vw), 3rem)`;
   const mImgSize = Math.max(12, Math.min(60, 200 / effectiveCount));
 
-  // Reset to first page when page size changes
   const handlePageSizeChange = (size: number) => {
     setPageSize(size);
     setPageIndex(0);
   };
 
-  // Track fullscreen state
   useEffect(() => {
     const handler = () => setIsFullscreen(!!document.fullscreenElement);
     document.addEventListener("fullscreenchange", handler);
     return () => document.removeEventListener("fullscreenchange", handler);
   }, []);
 
-  // Auto-rotate pages
   useEffect(() => {
     if (rotationTimer.current) clearInterval(rotationTimer.current);
     if (rotationInterval <= 0 || totalPages <= 1) return;
@@ -127,7 +113,6 @@ export default function AwardsGridClient({ awards }: AwardsGridProps) {
     return () => { if (rotationTimer.current) clearInterval(rotationTimer.current); };
   }, [rotationInterval, totalPages]);
 
-  // Toggle fullscreen
   const toggleFullscreen = () => {
     if (!document.fullscreenElement) {
       document.documentElement.requestFullscreen().catch(() => {});
@@ -160,24 +145,22 @@ export default function AwardsGridClient({ awards }: AwardsGridProps) {
       }}
     >
 
-
       {/* ---- DESKTOP TABLE ---- */}
       <div className="hidden md:flex landscape-show flex-col flex-1 min-h-0">
         <table className="w-full border-collapse table-fixed h-full" style={{ fontSize }}>
           <thead>
             <tr className="text-center font-semibold uppercase text-white" style={{ fontSize: headerSize, backgroundColor: "#1a3a6e", borderBottom: "6px solid #0a1628" }}>
               <th className="px-3 py-3 w-[8%]"></th>
-              <th className="px-3 py-3 w-[36%] text-left">Award Name</th>
-              <th className="px-3 py-3 w-[14%]">City</th>
-              <th className="px-3 py-3 w-[14%]">PIC</th>
-              <th className="px-3 py-3 w-[14%]">Days to Awards</th>
-              <th className="px-3 py-3 w-[14%]">Nom. Close Days</th>
+              <th className="px-3 py-3 w-[42%] text-left">Event Name</th>
+              <th className="px-3 py-3 w-[16%]">City</th>
+              <th className="px-3 py-3 w-[16%]">PIC</th>
+              <th className="px-3 py-3 w-[18%]">Days to Event</th>
             </tr>
           </thead>
           <tbody>
-            {rows.map((award, idx) => (
+            {rows.map((evt, idx) => (
               <tr
-                key={award ? (award.id || idx) : `empty-${idx}`}
+                key={evt ? (evt.id || idx) : `empty-${idx}`}
                 className="text-center uppercase"
                 style={{
                   height: `${rowHeight}vh`,
@@ -188,11 +171,11 @@ export default function AwardsGridClient({ awards }: AwardsGridProps) {
                 }}
               >
                 <td className="px-2 py-1">
-                  {award?.image && (
+                  {evt?.image && (
                     <div className="flex items-center justify-center">
                       <Image
-                        src={award.image}
-                        alt={award.title}
+                        src={evt.image}
+                        alt={evt.title}
                         width={imgSize * 2}
                         height={imgSize}
                         className="object-contain flex-shrink-0 rounded bg-white"
@@ -203,15 +186,12 @@ export default function AwardsGridClient({ awards }: AwardsGridProps) {
                   )}
                 </td>
                 <td className="px-2 py-1 text-left">
-                  {award && <span className="line-clamp-2" dangerouslySetInnerHTML={{ __html: award.title }} />}
+                  {evt && <span className="line-clamp-2" dangerouslySetInnerHTML={{ __html: evt.title }} />}
                 </td>
-                <td className="px-2 py-1">{award?.city || ""}</td>
-                <td className="px-2 py-1">{award?.contactPerson?.split(" ")[0] || ""}</td>
+                <td className="px-2 py-1">{evt?.city || ""}</td>
+                <td className="px-2 py-1">{evt?.contactPerson?.split(" ")[0] || ""}</td>
                 <td className="px-2 py-1 font-mono font-bold" style={{ fontSize: "1.5em" }}>
-                  {award && (() => { const v = daysUntil(award.field_date); return <span style={{ color: daysColor(v) }}>{v}</span>; })()}
-                </td>
-                <td className="px-2 py-1 font-mono font-bold" style={{ fontSize: "1.5em" }}>
-                  {award && (() => { const v = nominationCloseDays(award.endDate); return <span className={isNominationUrgent(award.endDate) ? "animate-flash" : ""} style={{ color: daysColor(v) }}>{v}</span>; })()}
+                  {evt && (() => { const v = daysUntil(evt.eventDate); return <span className={isEventUrgent(evt.eventDate) ? "animate-flash" : ""} style={{ color: daysColor(v) }}>{v}</span>; })()}
                 </td>
               </tr>
             ))}
@@ -224,16 +204,15 @@ export default function AwardsGridClient({ awards }: AwardsGridProps) {
         <table className="w-full border-collapse table-fixed h-full" style={{ fontSize: mFontSize }}>
           <thead>
             <tr className="text-center font-semibold uppercase text-white" style={{ fontSize: mHeaderSize, backgroundColor: "#1a3a6e", borderBottom: "6px solid #0a1628" }}>
-              <th className="px-1 py-2 w-[42%]">Award</th>
-              <th className="px-1 py-2 w-[22%]">City / PIC</th>
-              <th className="px-1 py-2 w-[18%]">Days to Awards</th>
-              <th className="px-1 py-2 w-[18%]">Nom. Close Days</th>
+              <th className="px-1 py-2 w-[45%]">Event</th>
+              <th className="px-1 py-2 w-[25%]">City / PIC</th>
+              <th className="px-1 py-2 pr-4 w-[30%]">Days to Event</th>
             </tr>
           </thead>
           <tbody>
-            {rows.map((award, idx) => (
+            {rows.map((evt, idx) => (
               <tr
-                key={award ? (award.id || idx) : `empty-m-${idx}`}
+                key={evt ? (evt.id || idx) : `empty-m-${idx}`}
                 className="text-center uppercase"
                 style={{
                   height: `${rowHeight}vh`,
@@ -244,12 +223,12 @@ export default function AwardsGridClient({ awards }: AwardsGridProps) {
                 }}
               >
                 <td className="px-1 py-1 text-center">
-                  {award && (
+                  {evt && (
                     <div className="flex flex-col items-center gap-1">
-                      {award.image && (
+                      {evt.image && (
                         <Image
-                          src={award.image}
-                          alt={award.title}
+                          src={evt.image}
+                          alt={evt.title}
                           width={mImgSize * 2}
                           height={mImgSize}
                           className="object-contain flex-shrink-0 rounded bg-white"
@@ -257,25 +236,22 @@ export default function AwardsGridClient({ awards }: AwardsGridProps) {
                           unoptimized
                         />
                       )}
-                      <span className="line-clamp-2" dangerouslySetInnerHTML={{ __html: award.title }} />
+                      <span className="line-clamp-2" dangerouslySetInnerHTML={{ __html: evt.title }} />
                     </div>
                   )}
                 </td>
                 <td className="px-1 py-1">
-                  {award && (
+                  {evt && (
                     <div className="flex flex-col">
-                      <span>{award.city || ""}</span>
-                      {award.contactPerson && (
-                        <span className="text-gray-400" style={{ fontSize: "0.85em" }}>{award.contactPerson.split(" ")[0]}</span>
+                      <span>{evt.city || ""}</span>
+                      {evt.contactPerson && (
+                        <span className="text-gray-400" style={{ fontSize: "0.85em" }}>{evt.contactPerson.split(" ")[0]}</span>
                       )}
                     </div>
                   )}
                 </td>
-                <td className="px-1 py-1 font-mono font-bold" style={{ fontSize: "1.5em" }}>
-                  {award && (() => { const v = daysUntil(award.field_date); return <span style={{ color: daysColor(v), fontSize: v === "ENDED" ? "0.75em" : undefined }}>{v}</span>; })()}
-                </td>
-                <td className="px-1 py-1 mr-4 font-mono font-bold" style={{ fontSize: "1.5em" }}>
-                  {award && (() => { const v = nominationCloseDays(award.endDate); return <span className={isNominationUrgent(award.endDate) ? "animate-flash" : ""} style={{ color: daysColor(v), fontSize: v === "CLOSED" ? "0.75em" : undefined }}>{v}</span>; })()}
+                <td className="px-1 py-1 pr-4 font-mono font-bold" style={{ fontSize: "1.5em" }}>
+                  {evt && (() => { const v = daysUntil(evt.eventDate); return <span className={isEventUrgent(evt.eventDate) ? "animate-flash" : ""} style={{ color: daysColor(v), fontSize: v === "ENDED" ? "0.75em" : undefined }}>{v}</span>; })()}
                 </td>
               </tr>
             ))}
@@ -283,67 +259,24 @@ export default function AwardsGridClient({ awards }: AwardsGridProps) {
         </table>
       </div>
 
-
-      {/* Hidden floating control bar – click bottom 25% to toggle */}
+      {/* Hidden floating control bar */}
       {showControls && (
         <div
           className="fixed bottom-20 left-1/2 -translate-x-1/2 z-50 bg-black/80 text-white rounded-xl shadow-lg flex flex-col md:flex-row items-center gap-3 px-4 py-3"
           onClick={(e) => e.stopPropagation()}
         >
-          <button
-            onClick={() => setPageIndex((i) => Math.max(0, i - 1))}
-            disabled={pageIndex === 0}
-            className="px-4 py-2 rounded bg-white/10 hover:bg-white/20 disabled:opacity-30 disabled:cursor-not-allowed"
-          >
-            ◀ Prev
-          </button>
-
-          <select
-            value={pageSize}
-            onChange={(e) => handlePageSizeChange(Number(e.target.value))}
-            className="px-4 py-2 bg-white/10 text-white rounded hover:bg-white/20 border-none text-sm cursor-pointer focus:outline-none [&>option]:bg-gray-800 [&>option]:text-white"
-          >
-            {PAGE_OPTIONS.map((n) => (
-              <option key={n} value={n}>{n} awards</option>
-            ))}
-            <option value={upcomingAwards.length}>All ({upcomingAwards.length})</option>
+          <button onClick={() => setPageIndex((i) => Math.max(0, i - 1))} disabled={pageIndex === 0} className="px-4 py-2 rounded bg-white/10 hover:bg-white/20 disabled:opacity-30 disabled:cursor-not-allowed">◀ Prev</button>
+          <select value={pageSize} onChange={(e) => handlePageSizeChange(Number(e.target.value))} className="px-4 py-2 bg-white/10 text-white rounded hover:bg-white/20 border-none text-sm cursor-pointer focus:outline-none [&>option]:bg-gray-800 [&>option]:text-white">
+            {PAGE_OPTIONS.map((n) => (<option key={n} value={n}>{n} events</option>))}
+            <option value={upcomingEvents.length}>All ({upcomingEvents.length})</option>
           </select>
-
-          <span className="text-sm text-white/60">
-            {pageIndex + 1} / {totalPages}
-          </span>
-
-          <button
-            onClick={() => setPageIndex((i) => Math.min(totalPages - 1, i + 1))}
-            disabled={pageIndex >= totalPages - 1}
-            className="px-4 py-2 rounded bg-white/10 hover:bg-white/20 disabled:opacity-30 disabled:cursor-not-allowed"
-          >
-            Next ▶
-          </button>
-
-          <select
-            value={rotationInterval}
-            onChange={(e) => setRotationInterval(Number(e.target.value))}
-            className="px-4 py-2 bg-white/10 text-white rounded hover:bg-white/20 border-none text-sm cursor-pointer focus:outline-none [&>option]:bg-gray-800 [&>option]:text-white"
-          >
-            {ROTATION_OPTIONS.map((opt) => (
-              <option key={opt.value} value={opt.value}>{opt.label}</option>
-            ))}
+          <span className="text-sm text-white/60">{pageIndex + 1} / {totalPages}</span>
+          <button onClick={() => setPageIndex((i) => Math.min(totalPages - 1, i + 1))} disabled={pageIndex >= totalPages - 1} className="px-4 py-2 rounded bg-white/10 hover:bg-white/20 disabled:opacity-30 disabled:cursor-not-allowed">Next ▶</button>
+          <select value={rotationInterval} onChange={(e) => setRotationInterval(Number(e.target.value))} className="px-4 py-2 bg-white/10 text-white rounded hover:bg-white/20 border-none text-sm cursor-pointer focus:outline-none [&>option]:bg-gray-800 [&>option]:text-white">
+            {ROTATION_OPTIONS.map((opt) => (<option key={opt.value} value={opt.value}>{opt.label}</option>))}
           </select>
-
-          <button
-            onClick={toggleFullscreen}
-            className="px-4 py-2 rounded bg-white/10 hover:bg-white/20 text-sm"
-          >
-            {isFullscreen ? "Exit ⛶" : "Fullscreen ⛶"}
-          </button>
-
-          <button
-            onClick={() => window.location.href = "/"}
-            className="px-4 py-2 rounded bg-white/10 hover:bg-white/20 text-sm"
-          >
-            Home
-          </button>
+          <button onClick={toggleFullscreen} className="px-4 py-2 rounded bg-white/10 hover:bg-white/20 text-sm">{isFullscreen ? "Exit ⛶" : "Fullscreen ⛶"}</button>
+          <button onClick={() => window.location.href = "/"} className="px-4 py-2 rounded bg-white/10 hover:bg-white/20 text-sm">Home</button>
         </div>
       )}
     </div>
