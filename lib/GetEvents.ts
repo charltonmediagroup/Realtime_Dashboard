@@ -4,6 +4,7 @@ export interface EventBrand {
   brand: string;
   name: string;
   url: string;
+  image?: string;
 }
 
 export interface BizzconEvent {
@@ -14,7 +15,6 @@ export interface BizzconEvent {
   link: string;
   image?: string;
   city?: string | null;
-  contactPerson?: string | null;
   venue?: string | null;
   registrationUrl?: string | null;
 }
@@ -28,11 +28,6 @@ function normalizeTitle(str?: string) {
     .replace(/\s+/g, " ")
     .trim()
     .toLowerCase();
-}
-
-function getBestSrcFromSrcset(srcset?: string) {
-  if (!srcset) return undefined;
-  return srcset.split(",").map((s) => s.trim().split(" ")[0]).pop();
 }
 
 async function safeFetch(url: string) {
@@ -67,19 +62,6 @@ function matchLocation(text: string): string | null {
     const regex = new RegExp(`\\b${loc.toLowerCase()}\\b`);
     if (regex.test(lower)) return loc;
   }
-  return null;
-}
-
-/* ---------------- CONTACT PERSON DETECTION ---------------- */
-function detectContactPerson($: cheerio.CheerioAPI): string | null {
-  const section = $("section.block-contact-data").first();
-  if (section.length) {
-    const name = section.find("strong").first().text().trim();
-    if (name) return name;
-  }
-  const pageText = $("body").text();
-  const match = pageText.match(/For more details,\s*contact:\s*([A-Z][a-z]+(?:\s+[A-Z][a-z]+)+)/);
-  if (match) return match[1].trim();
   return null;
 }
 
@@ -122,6 +104,16 @@ function parseDateFromPage($: cheerio.CheerioAPI): string | null {
   return null;
 }
 
+/* ---------------- CLEAN TITLE ---------------- */
+function cleanEventTitle(title: string): string {
+  // Remove trailing " - Location - Date" parts
+  // e.g. "Retail Asia Summit - Thailand - April 30, 2026" -> "Retail Asia Summit"
+  return title
+    .replace(/\s*-\s*(?:January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2},?\s+\d{4}$/i, "")
+    .replace(/\s*-\s*(?:Singapore|Hong Kong|Bangkok|Manila|Jakarta|Kuala Lumpur|Ho Chi Minh|Hanoi|Phnom Penh|Yangon|Taipei|Seoul|Tokyo|Shanghai|Beijing|Shenzhen|Mumbai|New Delhi|Dubai|Sydney|Melbourne|Macau|Cebu|Davao|Colombo|Dhaka|Malaysia|Indonesia|Thailand|Philippines|Vietnam|Cambodia|Myanmar|India|Sri Lanka|Bangladesh|Australia|New Zealand|Japan|South Korea|Taiwan|China|UAE|Saudi Arabia|Qatar|Bahrain|Oman|Kuwait|Greater Bay Area)$/i, "")
+    .trim();
+}
+
 /* ---------------- MAIN SCRAPER ---------------- */
 export async function getEvents(brands: EventBrand[]): Promise<BizzconEvent[]> {
   // 1. Scrape events listing pages for all brands
@@ -144,19 +136,9 @@ export async function getEvents(brands: EventBrand[]): Promise<BizzconEvent[]> {
 
           const fullUrl = href.startsWith("http") ? href : `${b.url}${href}`;
 
-          // Avoid duplicates within same brand
+          // Avoid duplicates within same brand — use brand logo
           if (!events.find((e) => e.link === fullUrl)) {
-            // Try to get associated image
-            const parent = $(el).closest(".item, .menu-item");
-            let img =
-              getBestSrcFromSrcset(parent.find("img").attr("data-srcset")) ||
-              getBestSrcFromSrcset(parent.find("img").attr("srcset")) ||
-              parent.find("img").attr("data-src") ||
-              parent.find("img").attr("data-lazy-src") ||
-              parent.find("img").attr("src");
-            if (img && !img.startsWith("http")) img = new URL(img, b.url).href;
-
-            events.push({ title, link: fullUrl, brand: b.brand, image: img || undefined });
+            events.push({ title, link: fullUrl, brand: b.brand, image: b.image ? `/${b.image}` : undefined });
           }
         });
 
@@ -186,8 +168,6 @@ export async function getEvents(brands: EventBrand[]): Promise<BizzconEvent[]> {
 
         const eventDate = parseDateFromPage($) || parseDateFromTitle(raw.title) || "";
         const city = matchLocation(raw.title) || matchLocation($("body").text().slice(0, 2000));
-        const contactPerson = detectContactPerson($);
-
         // Venue
         const venueEl = $(".bf-label:contains('Venue')").closest(".field-type-date").find("div").last().text().trim();
         const venue = venueEl || null;
@@ -195,22 +175,20 @@ export async function getEvents(brands: EventBrand[]): Promise<BizzconEvent[]> {
         // Registration URL
         const regLink = $("a:contains('Register Now')").attr("href") || null;
 
-        // Image from detail page if not from listing
-        let image = raw.image;
-        if (!image) {
-          const ogImage = $('meta[property="og:image"]').attr("content");
-          if (ogImage) image = ogImage;
-        }
+        // Event logo from detail page
+        const eventLogo =
+          $('img[src*="node_event_site_logo"]').attr("src") ||
+          $('img[data-src*="event_signup_logo"]').attr("data-src") ||
+          raw.image;
 
         return {
           id: raw.link,
           brand: raw.brand,
-          title: raw.title,
+          title: cleanEventTitle(raw.title),
           eventDate,
           link: raw.link,
-          image,
+          image: eventLogo,
           city: city || null,
-          contactPerson: contactPerson || null,
           venue: venue || null,
           registrationUrl: regLink || null,
         } as BizzconEvent;
@@ -218,12 +196,11 @@ export async function getEvents(brands: EventBrand[]): Promise<BizzconEvent[]> {
         return {
           id: raw.link,
           brand: raw.brand,
-          title: raw.title,
+          title: cleanEventTitle(raw.title),
           eventDate: parseDateFromTitle(raw.title) || "",
           link: raw.link,
           image: raw.image,
           city: matchLocation(raw.title) || null,
-          contactPerson: null,
           venue: null,
           registrationUrl: null,
         } as BizzconEvent;

@@ -9,6 +9,7 @@ interface SiteEntry {
   events?: boolean;
   url?: string;
   name?: string;
+  image?: string;
 }
 
 async function BizzconContent({ forceRefresh }: { forceRefresh: boolean }) {
@@ -18,7 +19,7 @@ async function BizzconContent({ forceRefresh }: { forceRefresh: boolean }) {
 
   const brands: EventBrand[] = Object.entries(config)
     .filter(([, site]) => site?.events && site?.url)
-    .map(([brand, site]) => ({ brand, name: site.name ?? brand, url: site.url! }));
+    .map(([brand, site]) => ({ brand, name: site.name ?? brand, url: site.url!, image: site.image }));
 
   const events = await getCachedEvents(brands, forceRefresh);
   return <BizzconGridClient events={events} />;

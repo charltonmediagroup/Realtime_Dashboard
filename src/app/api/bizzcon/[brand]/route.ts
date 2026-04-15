@@ -39,7 +39,7 @@ export async function GET(
       );
     }
 
-    const events = await getEvents([{ brand, ...site }]);
+    const events = await getEvents([{ brand, name: site.name ?? brand, url: site.url, image: site.image }]);
     brandEventsCache[brand] = { events, timestamp: now };
 
     return NextResponse.json(events);

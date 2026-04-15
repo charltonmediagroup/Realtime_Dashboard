@@ -11,7 +11,6 @@ export interface BizzconEvent {
   link: string;
   image?: string;
   city?: string | null;
-  contactPerson?: string | null;
   venue?: string | null;
   registrationUrl?: string | null;
 }
@@ -150,11 +149,10 @@ export default function BizzconGridClient({ events }: BizzconGridProps) {
         <table className="w-full border-collapse table-fixed h-full" style={{ fontSize }}>
           <thead>
             <tr className="text-center font-semibold uppercase text-white" style={{ fontSize: headerSize, backgroundColor: "#1a3a6e", borderBottom: "6px solid #0a1628" }}>
-              <th className="px-3 py-3 w-[8%]"></th>
-              <th className="px-3 py-3 w-[42%] text-left">Event Name</th>
-              <th className="px-3 py-3 w-[16%]">City</th>
-              <th className="px-3 py-3 w-[16%]">PIC</th>
-              <th className="px-3 py-3 w-[18%]">Days to Event</th>
+              <th className="px-2 py-3 w-[8%]"></th>
+              <th className="pl-0 pr-3 py-3 w-[52%] text-left">Event Name</th>
+              <th className="px-3 py-3 w-[24%]">City</th>
+              <th className="px-3 py-3 w-[16%]">Days to Event</th>
             </tr>
           </thead>
           <tbody>
@@ -171,25 +169,24 @@ export default function BizzconGridClient({ events }: BizzconGridProps) {
                 }}
               >
                 <td className="px-2 py-1">
-                  {evt?.image && (
-                    <div className="flex items-center justify-center">
+                  <div className="flex items-center justify-center mx-auto" style={{ width: imgSize, height: imgSize }}>
+                    {evt?.image && (
                       <Image
                         src={evt.image}
                         alt={evt.title}
-                        width={imgSize * 2}
+                        width={imgSize}
                         height={imgSize}
-                        className="object-contain flex-shrink-0 rounded bg-white"
-                        style={{ height: imgSize, width: "auto", maxWidth: imgSize * 2 }}
+                        className="object-contain rounded"
+                        style={{ maxWidth: "100%", maxHeight: "100%" }}
                         unoptimized
                       />
-                    </div>
-                  )}
+                    )}
+                  </div>
                 </td>
-                <td className="px-2 py-1 text-left">
+                <td className="pl-0 pr-2 py-1 text-left">
                   {evt && <span className="line-clamp-2" dangerouslySetInnerHTML={{ __html: evt.title }} />}
                 </td>
                 <td className="px-2 py-1">{evt?.city || ""}</td>
-                <td className="px-2 py-1">{evt?.contactPerson?.split(" ")[0] || ""}</td>
                 <td className="px-2 py-1 font-mono font-bold" style={{ fontSize: "1.5em" }}>
                   {evt && (() => { const v = daysUntil(evt.eventDate); return <span className={isEventUrgent(evt.eventDate) ? "animate-flash" : ""} style={{ color: daysColor(v) }}>{v}</span>; })()}
                 </td>
@@ -205,7 +202,7 @@ export default function BizzconGridClient({ events }: BizzconGridProps) {
           <thead>
             <tr className="text-center font-semibold uppercase text-white" style={{ fontSize: mHeaderSize, backgroundColor: "#1a3a6e", borderBottom: "6px solid #0a1628" }}>
               <th className="px-1 py-2 w-[45%]">Event</th>
-              <th className="px-1 py-2 w-[25%]">City / PIC</th>
+              <th className="px-1 py-2 w-[25%]">City</th>
               <th className="px-1 py-2 pr-4 w-[30%]">Days to Event</th>
             </tr>
           </thead>
@@ -231,8 +228,8 @@ export default function BizzconGridClient({ events }: BizzconGridProps) {
                           alt={evt.title}
                           width={mImgSize * 2}
                           height={mImgSize}
-                          className="object-contain flex-shrink-0 rounded bg-white"
-                          style={{ height: mImgSize, width: "auto", maxWidth: mImgSize * 2 }}
+                          className="object-contain rounded"
+                          style={{ width: mImgSize * 2, height: mImgSize }}
                           unoptimized
                         />
                       )}
@@ -241,14 +238,7 @@ export default function BizzconGridClient({ events }: BizzconGridProps) {
                   )}
                 </td>
                 <td className="px-1 py-1">
-                  {evt && (
-                    <div className="flex flex-col">
-                      <span>{evt.city || ""}</span>
-                      {evt.contactPerson && (
-                        <span className="text-gray-400" style={{ fontSize: "0.85em" }}>{evt.contactPerson.split(" ")[0]}</span>
-                      )}
-                    </div>
-                  )}
+                  {evt?.city || ""}
                 </td>
                 <td className="px-1 py-1 pr-4 font-mono font-bold" style={{ fontSize: "1.5em" }}>
                   {evt && (() => { const v = daysUntil(evt.eventDate); return <span className={isEventUrgent(evt.eventDate) ? "animate-flash" : ""} style={{ color: daysColor(v), fontSize: v === "ENDED" ? "0.75em" : undefined }}>{v}</span>; })()}

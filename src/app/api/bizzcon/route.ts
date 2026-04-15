@@ -14,7 +14,7 @@ export async function GET(req: Request) {
 
     const brands: EventBrand[] = Object.entries(config)
       .filter(([, site]: any) => site?.events && site?.url)
-      .map(([brand, site]: any) => ({ brand, name: site.name ?? brand, url: site.url! }));
+      .map(([brand, site]: any) => ({ brand, name: site.name ?? brand, url: site.url!, image: site.image }));
 
     const allEvents = await getCachedEvents(brands, forceRefresh);
 
