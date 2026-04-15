@@ -227,7 +227,7 @@ export default function AwardsGridClient({ awards }: AwardsGridProps) {
               <th className="px-1 py-2 w-[42%]">Award</th>
               <th className="px-1 py-2 w-[22%]">City / PIC</th>
               <th className="px-1 py-2 w-[18%]">Days to Awards</th>
-              <th className="px-1 py-2 pr-4 w-[18%]">Nom. Close Days</th>
+              <th className="px-1 py-2 w-[18%]">Nom. Close Days</th>
             </tr>
           </thead>
           <tbody>
@@ -272,10 +272,10 @@ export default function AwardsGridClient({ awards }: AwardsGridProps) {
                   )}
                 </td>
                 <td className="px-1 py-1 font-mono font-bold" style={{ fontSize: "1.5em" }}>
-                  {award && (() => { const v = daysUntil(award.field_date); return <span style={{ color: daysColor(v) }}>{v}</span>; })()}
+                  {award && (() => { const v = daysUntil(award.field_date); return <span style={{ color: daysColor(v), fontSize: v === "ENDED" ? "0.75em" : undefined }}>{v}</span>; })()}
                 </td>
-                <td className="px-1 py-1 pr-4 font-mono font-bold" style={{ fontSize: "1.5em" }}>
-                  {award && (() => { const v = nominationCloseDays(award.endDate); return <span className={isNominationUrgent(award.endDate) ? "animate-flash" : ""} style={{ color: daysColor(v) }}>{v}</span>; })()}
+                <td className="px-1 py-1 mr-4 font-mono font-bold" style={{ fontSize: "1.5em" }}>
+                  {award && (() => { const v = nominationCloseDays(award.endDate); return <span className={isNominationUrgent(award.endDate) ? "animate-flash" : ""} style={{ color: daysColor(v), fontSize: v === "CLOSED" ? "0.75em" : undefined }}>{v}</span>; })()}
                 </td>
               </tr>
             ))}
