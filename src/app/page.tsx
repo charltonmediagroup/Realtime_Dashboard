@@ -40,6 +40,10 @@ export default function Home() {
             QSR AUS
           </Link>
 
+          <Link href="/dashboard/bizzcon" className="hover:underline mt-8">
+            Bizzcon
+          </Link>
+
           <Link href="/all-active?grouped=true" className="hover:underline mt-4">
             View active users
           </Link>
