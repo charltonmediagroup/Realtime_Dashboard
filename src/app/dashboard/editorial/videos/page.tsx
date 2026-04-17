@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 import VideoRotator from "@/src/components/VideoRotator";
+import EditorialVideosTicker from "@/src/components/EditorialVideosTicker";
+import VideoPageControls from "@/src/components/VideoPageControls";
 
 interface SiteConfig {
   url?: string;
@@ -53,29 +55,45 @@ export default function EditorialVideosPage() {
     );
   }
 
-  const mainBrand = brands[0];
-  const sideBrands = brands.slice(1, 5);
+  const feedUrls = brands
+    .map((b) => getVideoFeed(b.siteConfig))
+    .filter(Boolean);
 
   return (
-    <div className="min-h-screen bg-white p-4 flex justify-center items-center">
-      <div className="flex gap-2 items-start w-[85%]">
-        <div className="flex-[4] min-w-0">
-          <VideoRotator xmlUrl={getVideoFeed(mainBrand.siteConfig)} />
+    <div className="h-screen bg-black flex flex-col overflow-hidden">
+      <div className="flex-1 min-h-0 relative overflow-hidden">
+        <div className="bg-video absolute inset-0">
+          <VideoRotator xmlUrl={feedUrls} />
         </div>
-        <div
-          className="flex-[1] min-w-0 flex flex-col gap-1 side-videos"
-          style={{ aspectRatio: "4 / 9" }}
-        >
-          {sideBrands.map((b) => (
-            <div key={b.brand} className="w-full flex-1 min-h-0">
-              <VideoRotator xmlUrl={getVideoFeed(b.siteConfig)} />
-            </div>
-          ))}
+        <div className="fg-video absolute inset-0">
+          <VideoRotator xmlUrl={feedUrls} />
         </div>
       </div>
+      <EditorialVideosTicker />
+      <VideoPageControls />
       <style>{`
-        .side-videos .video-title { display: none !important; }
-        .side-videos .video-area { aspect-ratio: auto !important; height: 100% !important; }
+        .bg-video .video-title,
+        .fg-video .video-title { display: none !important; }
+
+        .bg-video .video-wrapper { height: 100%; }
+        .bg-video .video-area {
+          aspect-ratio: auto !important;
+          width: 100% !important;
+          height: 100% !important;
+        }
+        .bg-video iframe {
+          transform: scale(1.4);
+          filter: blur(40px) saturate(1.3);
+          transform-origin: center;
+        }
+
+        .fg-video .video-wrapper { height: 100%; }
+        .fg-video .video-area {
+          aspect-ratio: auto !important;
+          width: 100% !important;
+          height: 100% !important;
+          background: transparent !important;
+        }
       `}</style>
     </div>
   );

@@ -3,7 +3,7 @@
 import { useEffect, useRef } from "react";
 
 interface VideoRotatorProps {
-  xmlUrl: string;
+  xmlUrl: string | string[];
   displayTime?: number;
   startIndex?: number;
   onError?: () => void;
@@ -24,24 +24,40 @@ export default function VideoRotator({
   const showingA = useRef(true);
   const intervalRef = useRef<number | null>(null);
 
+  const urlList = Array.isArray(xmlUrl) ? xmlUrl : [xmlUrl];
+  const urlKey = urlList.join("|");
+
   /* ---------- LOAD XML ---------- */
   useEffect(() => {
-    if (!xmlUrl) return;
+    const urls = urlList.filter(Boolean);
+    if (!urls.length) return;
 
-    fetch(xmlUrl + "?_ts=" + Date.now())
-      .then(res => {
-        if (!res.ok) throw new Error("XML fetch failed");
-        return res.text();
-      })
-      .then(xmlText => {
-        const xml = new DOMParser().parseFromString(xmlText, "application/xml");
+    const parseItems = (xmlText: string) => {
+      const xml = new DOMParser().parseFromString(xmlText, "application/xml");
+      return Array.from(xml.querySelectorAll("item"))
+        .map(item => ({
+          title: item.querySelector("title")?.textContent?.trim() || "",
+          link: item.querySelector("description")?.textContent?.trim() || "",
+        }))
+        .filter(v => v.link.includes("vimeo.com"));
+    };
 
-        videos.current = Array.from(xml.querySelectorAll("item"))
-          .map(item => ({
-            title: item.querySelector("title")?.textContent?.trim() || "",
-            link: item.querySelector("description")?.textContent?.trim() || "",
-          }))
-          .filter(v => v.link.includes("vimeo.com"));
+    Promise.all(
+      urls.map(u =>
+        fetch(u + "?_ts=" + Date.now())
+          .then(res => (res.ok ? res.text() : Promise.reject(new Error("XML fetch failed"))))
+          .then(parseItems)
+          .catch(() => [] as { title: string; link: string }[]),
+      ),
+    )
+      .then(results => {
+        const merged: { title: string; link: string }[] = [];
+        const maxLen = Math.max(...results.map(r => r.length), 0);
+        for (let i = 0; i < maxLen; i++) {
+          for (const r of results) if (r[i]) merged.push(r[i]);
+        }
+
+        videos.current = merged;
 
         if (!videos.current.length) throw new Error("No videos");
 
@@ -58,7 +74,7 @@ export default function VideoRotator({
       });
 
     return cleanup;
-  }, [xmlUrl, displayTime]);
+  }, [urlKey, displayTime]);
 
   /* ---------- CLEANUP (CRITICAL) ---------- */
   const cleanup = () => {

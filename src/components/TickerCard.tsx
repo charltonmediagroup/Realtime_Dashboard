@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 
 interface TickerCardProps {
-    feedUrl: string;
+    feedUrl: string | string[];
     label?: string;
     duration?: number;
     backgroundColor?: string;
@@ -26,31 +26,46 @@ export default function TickerCard({
     const headlineRef = useRef<HTMLDivElement>(null);
     const [scrolling, setScrolling] = useState(false);
 
-    // Fetch feed
+    const feedUrls = Array.isArray(feedUrl) ? feedUrl : [feedUrl];
+    const feedKey = feedUrls.join("|");
+
+    // Fetch feed(s)
     useEffect(() => {
-        if (!feedUrl) return;
+        const urls = feedUrls.filter(Boolean);
+        if (!urls.length) return;
         let timer: NodeJS.Timeout;
+
+        const parseTitles = (xmlText: string): string[] => {
+            const xml = new DOMParser().parseFromString(xmlText, "application/xml");
+            const items = xml.querySelectorAll("item");
+            if (items.length) {
+                return Array.from(items).map(
+                    (i) => i.querySelector("title")?.textContent?.trim() || "Untitled",
+                );
+            }
+            return Array.from(xml.querySelectorAll("entry")).map(
+                (e) => e.querySelector("title")?.textContent?.trim() || "Untitled",
+            );
+        };
 
         const loadHeadlines = async () => {
             try {
-                const res = await fetch(feedUrl + "?cache=" + Date.now());
-                const xmlText = await res.text();
-                const xml = new DOMParser().parseFromString(xmlText, "application/xml");
-
-                let titles: string[] = [];
-                const items = xml.querySelectorAll("item");
-                if (items.length) {
-                    titles = Array.from(items)
-                        .slice(0, limit)
-                        .map((i) => i.querySelector("title")?.textContent?.trim() || "Untitled");
-                } else {
-                    const entries = xml.querySelectorAll("entry");
-                    titles = Array.from(entries)
-                        .slice(0, limit)
-                        .map((e) => e.querySelector("title")?.textContent?.trim() || "Untitled");
+                const results = await Promise.all(
+                    urls.map(async (u) => {
+                        try {
+                            const res = await fetch(u + "?cache=" + Date.now());
+                            return parseTitles(await res.text());
+                        } catch {
+                            return [] as string[];
+                        }
+                    }),
+                );
+                const interleaved: string[] = [];
+                const maxLen = Math.max(...results.map((r) => r.length), 0);
+                for (let i = 0; i < maxLen; i++) {
+                    for (const r of results) if (r[i]) interleaved.push(r[i]);
                 }
-
-                setHeadlines(titles);
+                setHeadlines(interleaved.slice(0, limit));
             } catch (err) {
                 console.error("Failed to load RSS feed:", err);
             }
@@ -59,7 +74,7 @@ export default function TickerCard({
         loadHeadlines();
         timer = setInterval(loadHeadlines, refreshIntervalMs);
         return () => clearInterval(timer);
-    }, [feedUrl, limit, refreshIntervalMs]);
+    }, [feedKey, limit, refreshIntervalMs]);
 
     // Handle horizontal scroll for long headlines
     useEffect(() => {
