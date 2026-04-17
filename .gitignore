@@ -43,3 +43,6 @@ next-env.d.ts
 .env.local
 homebackup.txt
 src\app\dashboard\editorial\EditorialDashboardClient.tsx
+
+# claude code local state
+.claude/
