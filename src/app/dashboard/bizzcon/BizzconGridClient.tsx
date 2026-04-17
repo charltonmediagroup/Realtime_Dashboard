@@ -58,17 +58,20 @@ export default function BizzconGridClient({ events }: BizzconGridProps) {
     { label: "2 minutes", value: 120_000 },
     { label: "5 minutes", value: 300_000 },
   ];
-  const [pageSize, setPageSize] = useState(() =>
-    typeof window !== "undefined" && window.innerWidth < 768 ? 6 : 5,
-  );
+  const [pageSize, setPageSize] = useState(5);
   const [pageIndex, setPageIndex] = useState(0);
   const [rotationInterval, setRotationInterval] = useState(60_000);
   const [showControls, setShowControls] = useState(false);
-  const [isFullscreen, setIsFullscreen] = useState(() =>
-    typeof document !== "undefined" && !!document.fullscreenElement,
-  );
+  const [isFullscreen, setIsFullscreen] = useState(false);
   const rotationTimer = useRef<NodeJS.Timeout | null>(null);
-  const touchStartX = useRef<number | null>(null);
+  const touchStart = useRef<{ x: number; y: number } | null>(null);
+
+  useEffect(() => {
+    if (window.innerWidth < 768 && window.innerHeight > window.innerWidth) {
+      setPageSize(6);
+    }
+    setIsFullscreen(!!document.fullscreenElement);
+  }, []);
 
   const upcomingEvents = useMemo(() => {
     const filtered = events.filter((e) => new Date(e.eventDate) > now);
@@ -138,15 +141,18 @@ export default function BizzconGridClient({ events }: BizzconGridProps) {
         if (hideTimer.current) clearTimeout(hideTimer.current);
         if (showControls) hideTimer.current = setTimeout(() => setShowControls(false), 5000);
       }}
-      onTouchStart={(e) => { touchStartX.current = e.touches[0].clientX; }}
+      onTouchStart={(e) => {
+        touchStart.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+      }}
       onTouchEnd={(e) => {
-        if (touchStartX.current === null) return;
-        const diff = e.changedTouches[0].clientX - touchStartX.current;
-        if (Math.abs(diff) > 50) {
-          if (diff < 0) setPageIndex((i) => Math.min(totalPages - 1, i + 1));
+        if (touchStart.current === null) return;
+        const dx = e.changedTouches[0].clientX - touchStart.current.x;
+        const dy = e.changedTouches[0].clientY - touchStart.current.y;
+        if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy) * 1.5) {
+          if (dx < 0) setPageIndex((i) => Math.min(totalPages - 1, i + 1));
           else setPageIndex((i) => Math.max(0, i - 1));
         }
-        touchStartX.current = null;
+        touchStart.current = null;
       }}
     >
 
@@ -154,7 +160,7 @@ export default function BizzconGridClient({ events }: BizzconGridProps) {
       <div className="hidden md:flex landscape-show flex-col flex-1 min-h-0">
         <table className="w-full border-collapse table-fixed h-full" style={{ fontSize }}>
           <thead>
-            <tr className="text-center font-semibold uppercase text-white/90" style={{ fontSize: headerSize, backgroundColor: "#1a1a1a", letterSpacing: "0.12em" }}>
+            <tr className="text-center font-semibold uppercase text-white/90" style={{ fontSize: headerSize, backgroundColor: "#0d0d0d", letterSpacing: "0.12em" }}>
               <th className="px-2 py-3 w-[14%]"></th>
               <th className="pl-0 pr-3 py-3 w-[46%] text-left">Event Name</th>
               <th className="px-3 py-3 w-[24%]">City</th>
@@ -170,7 +176,7 @@ export default function BizzconGridClient({ events }: BizzconGridProps) {
                 style={{
                   height: `${rowHeight}vh`,
                   maxHeight: "12vh",
-                  background: idx % 2 === 0 ? "linear-gradient(90deg, #111111, #151515)" : "linear-gradient(90deg, #1a1a1a, #1e1e1e)",
+                  background: idx % 2 === 0 ? "linear-gradient(90deg, #1f1f1f, #242424)" : "linear-gradient(90deg, #343434, #393939)",
                   color: "#ffffff",
                   borderBottom: "0.5px solid #222",
                 }}
@@ -207,7 +213,7 @@ export default function BizzconGridClient({ events }: BizzconGridProps) {
       <div className="flex md:hidden landscape-hide flex-col flex-1 min-h-0">
         <table className="w-full border-collapse table-fixed h-full" style={{ fontSize: mFontSize }}>
           <thead>
-            <tr className="text-center font-semibold uppercase text-white/90" style={{ fontSize: mHeaderSize, backgroundColor: "#1a1a1a", letterSpacing: "0.12em" }}>
+            <tr className="text-center font-semibold uppercase text-white/90" style={{ fontSize: mHeaderSize, backgroundColor: "#0d0d0d", letterSpacing: "0.12em" }}>
               <th className="px-1 py-2 w-[45%]">Event</th>
               <th className="px-1 py-2 w-[25%]">City</th>
               <th className="px-1 py-2 pr-4 w-[30%]">Days to Event</th>
@@ -222,7 +228,7 @@ export default function BizzconGridClient({ events }: BizzconGridProps) {
                 style={{
                   height: `${rowHeight}vh`,
                   maxHeight: "12vh",
-                  background: idx % 2 === 0 ? "linear-gradient(90deg, #111111, #151515)" : "linear-gradient(90deg, #1a1a1a, #1e1e1e)",
+                  background: idx % 2 === 0 ? "linear-gradient(90deg, #1f1f1f, #242424)" : "linear-gradient(90deg, #343434, #393939)",
                   color: "#ffffff",
                   borderBottom: "0.5px solid #222",
                 }}

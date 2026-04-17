@@ -22,7 +22,7 @@ export default function BizzconBrandPage() {
 
   if (error) {
     return (
-      <div className="flex items-center justify-center h-screen bg-gray-950 text-red-400">
+      <div className="flex items-center justify-center h-screen bg-gray-800 text-red-400">
         {error}
       </div>
     );

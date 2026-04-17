@@ -34,7 +34,7 @@ export default async function BizzconPage({
   const forceRefresh = params.cache === "false";
 
   return (
-    <div className="min-h-screen max-w-screen overflow-auto bg-gray-950">
+    <div className="min-h-screen max-w-screen overflow-auto">
       <Suspense fallback={<LoadingPage loadingText="Loading Events..." />}>
         <BizzconContent forceRefresh={forceRefresh} />
       </Suspense>

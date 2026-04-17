@@ -2,9 +2,9 @@
 
 import ShortsPlayer from "@/src/components/ShortsPlayer";
 
-export default function BizzconShortsPage() {
+export default function EditorialShortsPage() {
   return (
-    <div className="min-h-screen bg-gray-800">
+    <div className="min-h-screen bg-gray-950">
       <ShortsPlayer className="h-screen" />
     </div>
   );
