@@ -81,9 +81,9 @@ export default function BrandDashboard({
           )}
 
           <div
-            onClick={toggleFullscreen}
+            onClick={() => window.location.href = "/"}
             className="relative h-12 w-20 md:h-24 md:w-32 cursor-pointer block md:hidden"
-            title="Toggle fullscreen"
+            title="Home"
           >
             <Image
               src="/logo/cmg.png"
@@ -139,9 +139,9 @@ export default function BrandDashboard({
         {/* CMG fullscreen toggle */}
         <div className="flex w-fit">
           <div
-            onClick={toggleFullscreen}
+            onClick={() => window.location.href = "/"}
             className="relative h-12 w-20 md:h-24 md:w-32 cursor-pointer hidden md:block"
-            title="Toggle fullscreen"
+            title="Home"
           >
             <Image
               src="/logo/cmg.png"
