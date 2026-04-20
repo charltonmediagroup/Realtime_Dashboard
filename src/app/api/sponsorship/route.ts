@@ -91,16 +91,27 @@ export async function GET() {
     const nowQuarter = currentQuarter();
     const quarterRegex = QUARTER_LABELS[nowQuarter];
 
-    // Row indexes already consumed as quarterly/section headers we should skip when recording weeks
     const isQuarterRow = (label: string) =>
       Object.values(QUARTER_LABELS).some((re) => re.test(label));
 
-    // Detect weekly section ends when we hit empty or "IN USD"/quarterly header region
+    // Weekly section ends at the first "TOTAL" row (per-person totals summary) or a quarter row.
     let inWeeklySection = true;
+    let totalsRowFound = false;
 
     for (let i = 1; i < rows.length; i++) {
       const row = rows[i];
       const label = String(row[0] ?? "").trim();
+
+      // Per-person TOTAL summary row (column A exactly "TOTAL") — authoritative totals
+      if (label.toUpperCase() === "TOTAL") {
+        salespeople.forEach((name, idx) => {
+          const cell = parseCurrency(row[1 + idx]);
+          if (typeof cell === "number") totals[name] = cell;
+        });
+        totalsRowFound = true;
+        inWeeklySection = false;
+        continue;
+      }
 
       // Quarter row match — record per-person totals for current quarter
       if (quarterRegex.test(label)) {
@@ -125,7 +136,8 @@ export async function GET() {
       salespeople.forEach((name, idx) => {
         const cell = parseCurrency(row[1 + idx]);
         values[name] = cell;
-        if (typeof cell === "number") totals[name] += cell;
+        // Only sum weekly cells as a fallback if no TOTAL row exists
+        if (!totalsRowFound && typeof cell === "number") totals[name] += cell;
       });
 
       const weeklyRaw = totalIdx >= 0 ? parseCurrency(row[totalIdx]) : null;
