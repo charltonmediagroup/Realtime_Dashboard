@@ -37,12 +37,12 @@ function isEventUrgent(dateStr?: string | null): boolean {
 
 /* Green-to-red color based on days remaining */
 function daysColor(value: string): string {
-  if (value === "ENDED") return "#ef4444";
+  if (value === "ENDED") return "#ff1744";
   const days = parseInt(value, 10);
   if (isNaN(days)) return "#ffffff";
-  if (days > 60) return "#22c55e";
-  if (days > 30) return "#eab308";
-  return "#ef4444";
+  if (days > 60) return "#00e676";
+  if (days > 30) return "#ffd60a";
+  return "#ff1744";
 }
 
 /* ---------- Component ---------- */
@@ -92,12 +92,14 @@ export default function BizzconGridClient({ events }: BizzconGridProps) {
 
   const count = pageSize || 1;
   const effectiveCount = Math.min(count, 12);
-  const rowHeight = Math.floor(70 / effectiveCount);
-  const fontSize = `clamp(1.3rem, calc(0.8vw + ${7.5 / effectiveCount}vw), 4.5rem)`;
-  const headerSize = `clamp(0.85rem, calc(0.5vw + ${4.5 / effectiveCount}vw), 3rem)`;
-  const imgSize = Math.max(88, Math.min(320, 1050 / effectiveCount));
-  const mFontSize = `clamp(0.8rem, calc(1.2vw + ${9 / effectiveCount}vw), 4.5rem)`;
-  const mHeaderSize = `clamp(0.65rem, calc(0.8vw + ${6 / effectiveCount}vw), 3rem)`;
+  const rowHeight = Math.floor(80 / effectiveCount);
+  const fontSize = `clamp(1rem, calc(0.8vw + ${9.5 / effectiveCount}vw), 6rem)`;
+  const headerSize = `clamp(0.9rem, calc(0.55vw + ${5.5 / effectiveCount}vw), 3.8rem)`;
+  const imgSize = effectiveCount <= 6
+    ? Math.max(88, Math.min(320, 1050 / effectiveCount))
+    : Math.max(56, Math.min(260, 780 / effectiveCount));
+  const mFontSize = `clamp(0.95rem, calc(1.15vw + ${11.5 / effectiveCount}vw), 6rem)`;
+  const mHeaderSize = `clamp(0.8rem, calc(0.8vw + ${7 / effectiveCount}vw), 3.8rem)`;
   const mImgSize = Math.max(32, Math.min(130, 420 / effectiveCount));
 
   const handlePageSizeChange = (size: number) => {
@@ -132,7 +134,7 @@ export default function BizzconGridClient({ events }: BizzconGridProps) {
   return (
     <div
       className={`flex flex-col justify-center h-screen pt-4 pb-8 px-0 md:px-4 overflow-hidden`}
-      style={{ backgroundColor: "#0a0a0a" }}
+      style={{ backgroundColor: "#181818" }}
       ref={tableRef}
       onClick={(e) => {
         if (e.clientY > window.innerHeight * 0.75) setShowControls(prev => !prev);
@@ -160,7 +162,7 @@ export default function BizzconGridClient({ events }: BizzconGridProps) {
       <div className="hidden md:flex landscape-show flex-col flex-1 min-h-0">
         <table className="w-full border-collapse table-fixed h-full" style={{ fontSize }}>
           <thead>
-            <tr className="text-center font-semibold uppercase text-white/90" style={{ fontSize: headerSize, backgroundColor: "#0d0d0d", letterSpacing: "0.12em" }}>
+            <tr className="text-center font-semibold uppercase text-white/90" style={{ fontSize: headerSize, backgroundColor: "#242424", letterSpacing: "0.12em" }}>
               <th className="px-2 py-3 w-[14%]"></th>
               <th className="pl-0 pr-3 py-3 w-[46%] text-left">Event Name</th>
               <th className="px-3 py-3 w-[24%]">City</th>
@@ -175,14 +177,14 @@ export default function BizzconGridClient({ events }: BizzconGridProps) {
                 className="text-center uppercase"
                 style={{
                   height: `${rowHeight}vh`,
-                  maxHeight: "12vh",
-                  background: idx % 2 === 0 ? "linear-gradient(90deg, #1f1f1f, #242424)" : "linear-gradient(90deg, #343434, #393939)",
+                  maxHeight: `${rowHeight}vh`,
+                  background: idx % 2 === 0 ? "linear-gradient(90deg, #4A4A4A, #505050)" : "linear-gradient(90deg, #73787C, #7A7F83)",
                   color: "#ffffff",
                   borderBottom: "0.5px solid #222",
                 }}
               >
                 <td className="px-2 py-1" style={{ height: `${rowHeight}vh` }}>
-                  <div className="flex items-center justify-center mx-auto h-full" style={{ maxWidth: imgSize, maxHeight: "100%" }}>
+                  <div className="flex items-center justify-center mx-auto h-full" style={{ maxWidth: imgSize, maxHeight: `${rowHeight}vh` }}>
                     {evt?.image && (
                       <Image
                         src={evt.image}
@@ -213,7 +215,7 @@ export default function BizzconGridClient({ events }: BizzconGridProps) {
       <div className="flex md:hidden landscape-hide flex-col flex-1 min-h-0">
         <table className="w-full border-collapse table-fixed h-full" style={{ fontSize: mFontSize }}>
           <thead>
-            <tr className="text-center font-semibold uppercase text-white/90" style={{ fontSize: mHeaderSize, backgroundColor: "#0d0d0d", letterSpacing: "0.12em" }}>
+            <tr className="text-center font-semibold uppercase text-white/90" style={{ fontSize: mHeaderSize, backgroundColor: "#242424", letterSpacing: "0.12em" }}>
               <th className="px-1 py-2 w-[45%]">Event</th>
               <th className="px-1 py-2 w-[25%]">City</th>
               <th className="px-1 py-2 pr-4 w-[30%]">Days to Event</th>
@@ -227,8 +229,8 @@ export default function BizzconGridClient({ events }: BizzconGridProps) {
                 className="text-center uppercase"
                 style={{
                   height: `${rowHeight}vh`,
-                  maxHeight: "12vh",
-                  background: idx % 2 === 0 ? "linear-gradient(90deg, #1f1f1f, #242424)" : "linear-gradient(90deg, #343434, #393939)",
+                  maxHeight: `${rowHeight}vh`,
+                  background: idx % 2 === 0 ? "linear-gradient(90deg, #4A4A4A, #505050)" : "linear-gradient(90deg, #73787C, #7A7F83)",
                   color: "#ffffff",
                   borderBottom: "0.5px solid #222",
                 }}
