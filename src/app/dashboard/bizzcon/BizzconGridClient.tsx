@@ -211,7 +211,7 @@ export default function BizzconGridClient({ events }: BizzconGridProps) {
                 </td>
                 <td className="px-2 py-1" style={{ fontWeight: 300 }}>{evt?.city || ""}</td>
                 <td className="px-2 py-1 font-mono font-bold" style={{ fontSize: "1.5em" }}>
-                  {evt && (() => { const v = daysUntil(evt.eventDate); const c = daysColor(v); return <span className={isEventUrgent(evt.eventDate) ? "animate-flash" : ""} style={{ color: c, textShadow: `0 0 8px ${c}40, 0 0 20px ${c}20` }}>{v}</span>; })()}
+                  {evt && (() => { const v = daysUntil(evt.eventDate); const c = daysColor(v); return <span className={isEventUrgent(evt.eventDate) ? "animate-flash" : ""} style={{ color: c, textShadow: `1px 2px 3px rgba(0,0,0,0.4), 0 0 8px ${c}40, 0 0 20px ${c}20` }}>{v}</span>; })()}
                 </td>
               </tr>
             ))}
@@ -265,7 +265,7 @@ export default function BizzconGridClient({ events }: BizzconGridProps) {
                   {evt?.city || ""}
                 </td>
                 <td className="px-1 py-1 pr-4 font-mono font-bold" style={{ fontSize: "1.5em" }}>
-                  {evt && (() => { const v = daysUntil(evt.eventDate); const c = daysColor(v); return <span className={isEventUrgent(evt.eventDate) ? "animate-flash" : ""} style={{ color: c, textShadow: `0 0 8px ${c}40, 0 0 20px ${c}20`, fontSize: v === "ENDED" ? "0.75em" : undefined }}>{v}</span>; })()}
+                  {evt && (() => { const v = daysUntil(evt.eventDate); const c = daysColor(v); return <span className={isEventUrgent(evt.eventDate) ? "animate-flash" : ""} style={{ color: c, textShadow: `1px 2px 3px rgba(0,0,0,0.4), 0 0 8px ${c}40, 0 0 20px ${c}20`, fontSize: v === "ENDED" ? "0.75em" : undefined }}>{v}</span>; })()}
                 </td>
               </tr>
             ))}
