@@ -5,7 +5,7 @@ export const dynamic = "force-dynamic";
 
 const SHEET_ID = "1QgONEKtOeeE12ts5maQlMfAlnee1qxi7O-E8zhtJjxY";
 const SHEET_GID = 124466268;
-const RANGE_SUFFIX = "!A1:J21";
+const RANGE_SUFFIX = "!A1:J40";
 
 type Cell = number | string | null;
 
@@ -16,11 +16,15 @@ type Week = {
   monthlyTotal: number | null;
 };
 
+type Quarter = "Q1" | "Q2" | "Q3" | "Q4";
+
 type Payload = {
   salespeople: string[];
   weeks: Week[];
   totals: Record<string, number>;
   grandTotal: number;
+  currentQuarter: Quarter;
+  quarterTotals: Record<string, number>;
   lastUpdated: string;
 };
 
@@ -33,6 +37,21 @@ function parseCurrency(raw: unknown): Cell {
   if (Number.isFinite(n)) return n;
   return s.toUpperCase();
 }
+
+function currentQuarter(d = new Date()): Quarter {
+  const m = d.getMonth(); // 0-11
+  if (m <= 2) return "Q1";
+  if (m <= 5) return "Q2";
+  if (m <= 8) return "Q3";
+  return "Q4";
+}
+
+const QUARTER_LABELS: Record<Quarter, RegExp> = {
+  Q1: /^1st\s*quarter$/i,
+  Q2: /^2nd\s*quarter$/i,
+  Q3: /^3rd\s*quarter$/i,
+  Q4: /^4th\s*quarter$/i,
+};
 
 async function resolveTabName(sheets: ReturnType<typeof getSheetsClient>): Promise<string> {
   const meta = await sheets.spreadsheets.get({ spreadsheetId: SHEET_ID, fields: "sheets(properties(sheetId,title))" });
@@ -66,13 +85,42 @@ export async function GET() {
       .filter((n) => n.length > 0);
 
     const totals: Record<string, number> = Object.fromEntries(salespeople.map((n) => [n, 0]));
+    const quarterTotals: Record<string, number> = Object.fromEntries(salespeople.map((n) => [n, 0]));
     const weeks: Week[] = [];
+
+    const nowQuarter = currentQuarter();
+    const quarterRegex = QUARTER_LABELS[nowQuarter];
+
+    // Row indexes already consumed as quarterly/section headers we should skip when recording weeks
+    const isQuarterRow = (label: string) =>
+      Object.values(QUARTER_LABELS).some((re) => re.test(label));
+
+    // Detect weekly section ends when we hit empty or "IN USD"/quarterly header region
+    let inWeeklySection = true;
 
     for (let i = 1; i < rows.length; i++) {
       const row = rows[i];
-      const week = String(row[0] ?? "").trim();
-      if (!week) continue;
+      const label = String(row[0] ?? "").trim();
 
+      // Quarter row match — record per-person totals for current quarter
+      if (quarterRegex.test(label)) {
+        salespeople.forEach((name, idx) => {
+          const cell = parseCurrency(row[1 + idx]);
+          if (typeof cell === "number") quarterTotals[name] += cell;
+        });
+        inWeeklySection = false;
+        continue;
+      }
+
+      if (isQuarterRow(label)) {
+        inWeeklySection = false;
+        continue;
+      }
+
+      if (!inWeeklySection) continue;
+      if (!label) continue;
+
+      // Weekly row
       const values: Record<string, Cell> = {};
       salespeople.forEach((name, idx) => {
         const cell = parseCurrency(row[1 + idx]);
@@ -84,7 +132,7 @@ export async function GET() {
       const monthlyRaw = monthlyIdx >= 0 ? parseCurrency(row[monthlyIdx]) : null;
 
       weeks.push({
-        week,
+        week: label,
         values,
         weeklyTotal: typeof weeklyRaw === "number" ? weeklyRaw : 0,
         monthlyTotal: typeof monthlyRaw === "number" ? monthlyRaw : null,
@@ -98,6 +146,8 @@ export async function GET() {
       weeks,
       totals,
       grandTotal,
+      currentQuarter: nowQuarter,
+      quarterTotals,
       lastUpdated: new Date().toISOString(),
     };
 

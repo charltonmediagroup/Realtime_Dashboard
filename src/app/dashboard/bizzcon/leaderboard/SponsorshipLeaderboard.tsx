@@ -13,11 +13,15 @@ type Week = {
   monthlyTotal: number | null;
 };
 
+type Quarter = "Q1" | "Q2" | "Q3" | "Q4";
+
 type Payload = {
   salespeople: string[];
   weeks: Week[];
   totals: Record<string, number>;
   grandTotal: number;
+  currentQuarter: Quarter;
+  quarterTotals: Record<string, number>;
   lastUpdated: string;
 };
 
@@ -84,13 +88,22 @@ export default function SponsorshipLeaderboard() {
   const ranked = useMemo(() => {
     if (!data) return [];
     return data.salespeople
-      .map((name) => ({ name, total: data.totals[name] ?? 0 }))
+      .map((name) => ({
+        name,
+        total: data.totals[name] ?? 0,
+        quarter: data.quarterTotals?.[name] ?? 0,
+      }))
       .sort((a, b) => b.total - a.total);
+  }, [data]);
+
+  const quarterGrandTotal = useMemo(() => {
+    if (!data?.quarterTotals) return 0;
+    return Object.values(data.quarterTotals).reduce((a, b) => a + b, 0);
   }, [data]);
 
   if (error && !data) {
     return (
-      <div className="flex items-center justify-center h-screen text-red-400 text-center px-6" style={{ backgroundColor: "#0a0a0a" }}>
+      <div className="flex items-center justify-center h-screen text-red-400 text-center px-6" style={{ backgroundColor: "#2a2a2a" }}>
         Failed to load: {error}
       </div>
     );
@@ -98,7 +111,7 @@ export default function SponsorshipLeaderboard() {
 
   if (!data) {
     return (
-      <div className="flex items-center justify-center h-screen text-white/70" style={{ backgroundColor: "#0a0a0a" }}>
+      <div className="flex items-center justify-center h-screen text-white/70" style={{ backgroundColor: "#2a2a2a" }}>
         Loading...
       </div>
     );
@@ -106,16 +119,15 @@ export default function SponsorshipLeaderboard() {
 
   const rowCount = ranked.length + 1;
   const effectiveCount = Math.min(rowCount, 12);
-  const rowHeight = Math.floor(70 / effectiveCount);
-  const fontSize = `clamp(1.3rem, calc(0.8vw + ${7.5 / effectiveCount}vw), 4.5rem)`;
-  const headerSize = `clamp(0.85rem, calc(0.5vw + ${4.5 / effectiveCount}vw), 3rem)`;
-  const mFontSize = `clamp(0.9rem, calc(1.2vw + ${9 / effectiveCount}vw), 4.5rem)`;
-  const mHeaderSize = `clamp(0.7rem, calc(0.8vw + ${6 / effectiveCount}vw), 3rem)`;
+  const fontSize = `clamp(2rem, calc(1.2vw + ${13 / effectiveCount}vw), 7rem)`;
+  const headerSize = `clamp(1.2rem, calc(0.75vw + ${7 / effectiveCount}vw), 4rem)`;
+  const mFontSize = `clamp(1.3rem, calc(1.6vw + ${13.5 / effectiveCount}vw), 6.5rem)`;
+  const mHeaderSize = `clamp(1rem, calc(1.1vw + ${8.5 / effectiveCount}vw), 4rem)`;
 
   return (
     <div
       className="flex flex-col justify-center h-screen pt-4 pb-8 px-0 md:px-4 overflow-hidden"
-      style={{ backgroundColor: "#0a0a0a" }}
+      style={{ backgroundColor: "#2a2a2a" }}
       onClick={(e) => {
         if (e.clientY > window.innerHeight * 0.75) setShowControls((prev) => !prev);
       }}
@@ -128,12 +140,13 @@ export default function SponsorshipLeaderboard() {
       <div className="hidden md:flex landscape-show flex-col flex-1 min-h-0">
         <table className="w-full border-collapse table-fixed h-full" style={{ fontSize }}>
           <thead>
-            <tr className="text-center font-semibold uppercase text-white/90" style={{ fontSize: headerSize, backgroundColor: "#1a1a1a", letterSpacing: "0.12em" }}>
-              <th className="px-2 py-3 w-[14%]">Rank</th>
-              <th className="pl-0 pr-3 py-3 w-[56%] text-left">Person in Charge</th>
-              <th className="px-3 py-3 w-[30%] text-right">Total Sales</th>
+            <tr className="text-center font-semibold uppercase text-white/90" style={{ fontSize: headerSize, backgroundColor: "#3a3a3a", letterSpacing: "0.12em" }}>
+              <th className="px-2 py-3 w-[12%]">Rank</th>
+              <th className="pl-0 pr-3 py-3 w-[40%] text-left">Person in Charge</th>
+              <th className="px-3 py-3 w-[24%] text-right">This {data.currentQuarter}</th>
+              <th className="px-3 py-3 w-[24%] text-right">Total Sales</th>
             </tr>
-            <tr><td colSpan={3} style={{ padding: 0, height: "2px", background: "linear-gradient(90deg, #d4a853, transparent)" }} /></tr>
+            <tr><td colSpan={4} style={{ padding: 0, height: "2px", background: "linear-gradient(90deg, #d4a853, transparent)" }} /></tr>
           </thead>
           <tbody>
             {ranked.map((row, idx) => {
@@ -144,20 +157,21 @@ export default function SponsorshipLeaderboard() {
                   key={row.name}
                   className="text-center uppercase"
                   style={{
-                    height: `${rowHeight}vh`,
-                    maxHeight: "12vh",
-                    background: idx % 2 === 0 ? "linear-gradient(90deg, #111111, #151515)" : "linear-gradient(90deg, #1a1a1a, #1e1e1e)",
+                    background: idx % 2 === 0 ? "linear-gradient(90deg, #4A4A4A, #505050)" : "linear-gradient(90deg, #73787C, #7A7F83)",
                     color: "#ffffff",
                     borderBottom: "0.5px solid #222",
                   }}
                 >
-                  <td className="px-2 py-1 font-mono font-bold" style={{ color, textShadow: `0 0 8px ${color}40, 0 0 20px ${color}20`, fontSize: "1.3em" }}>
+                  <td className="px-2 py-1 font-mono font-bold" style={{ color, textShadow: rank <= 3 ? `0 1px 3px rgba(0,0,0,0.8), 0 0 8px ${color}40, 0 0 20px ${color}20` : "0 1px 3px rgba(0,0,0,0.8)", fontSize: "1.3em" }}>
                     #{rank}
                   </td>
                   <td className="pl-0 pr-2 py-1 text-left" style={{ fontWeight: 300 }}>
                     {row.name}
                   </td>
-                  <td className="px-3 py-1 text-right font-mono font-bold" style={{ color: row.total > 0 ? "#22c55e" : "#555" }}>
+                  <td className="px-3 py-1 text-right font-mono font-bold" style={{ color: row.quarter > 0 ? "#ffffff" : "#bbbbbb", textShadow: "0 1px 3px rgba(0,0,0,0.8)" }}>
+                    {formatCurrency(row.quarter)}
+                  </td>
+                  <td className="px-3 py-1 text-right font-mono font-bold" style={{ color: row.total > 0 ? "#00ff88" : "#bbbbbb", textShadow: row.total > 0 ? "0 1px 3px rgba(0,0,0,0.8), 0 0 12px rgba(0,255,136,0.3)" : "none" }}>
                     {formatCurrency(row.total)}
                   </td>
                 </tr>
@@ -166,18 +180,20 @@ export default function SponsorshipLeaderboard() {
             <tr
               className="text-center uppercase"
               style={{
-                height: `${rowHeight}vh`,
-                maxHeight: "12vh",
-                background: "linear-gradient(90deg, #1a1a1a, #2a2416)",
-                borderTop: "2px solid #d4a853",
-                color: "#d4a853",
+                background: "linear-gradient(90deg, #2a2a2a, #3a3020)",
+                borderTop: "2px solid rgba(212, 168, 83, 0.6)",
+                color: "#f0c668",
+                textShadow: "0 1px 3px rgba(0,0,0,0.8)",
               }}
             >
               <td className="px-2 py-1" />
               <td className="pl-0 pr-2 py-1 text-left font-semibold" style={{ letterSpacing: "0.12em" }}>
                 Total
               </td>
-              <td className="px-3 py-1 text-right font-mono font-bold" style={{ fontSize: "1.15em", textShadow: "0 0 8px #d4a85340, 0 0 20px #d4a85320" }}>
+              <td className="px-3 py-1 text-right font-mono font-bold" style={{ fontSize: "1.15em", textShadow: "0 1px 3px rgba(0,0,0,0.8), 0 0 8px #d4a85340, 0 0 20px #d4a85320" }}>
+                {formatCurrency(quarterGrandTotal)}
+              </td>
+              <td className="px-3 py-1 text-right font-mono font-bold" style={{ fontSize: "1.15em", textShadow: "0 1px 3px rgba(0,0,0,0.8), 0 0 8px #d4a85340, 0 0 20px #d4a85320" }}>
                 {formatCurrency(data.grandTotal)}
               </td>
             </tr>
@@ -189,12 +205,13 @@ export default function SponsorshipLeaderboard() {
       <div className="flex md:hidden landscape-hide flex-col flex-1 min-h-0">
         <table className="w-full border-collapse table-fixed h-full" style={{ fontSize: mFontSize }}>
           <thead>
-            <tr className="text-center font-semibold uppercase text-white/90" style={{ fontSize: mHeaderSize, backgroundColor: "#1a1a1a", letterSpacing: "0.12em" }}>
-              <th className="px-1 py-2 w-[18%]">Rank</th>
-              <th className="px-1 py-2 w-[47%] text-left">Person in Charge</th>
-              <th className="px-1 py-2 pr-3 w-[35%] text-right">Total</th>
+            <tr className="text-center font-semibold uppercase text-white/90" style={{ fontSize: mHeaderSize, backgroundColor: "#3a3a3a", letterSpacing: "0.12em" }}>
+              <th className="px-1 py-2 w-[14%]">Rank</th>
+              <th className="px-1 py-2 w-[36%] text-left">Person</th>
+              <th className="px-1 py-2 w-[25%] text-right">{data.currentQuarter}</th>
+              <th className="px-1 py-2 pr-3 w-[25%] text-right">Total</th>
             </tr>
-            <tr><td colSpan={3} style={{ padding: 0, height: "2px", background: "linear-gradient(90deg, #d4a853, transparent)" }} /></tr>
+            <tr><td colSpan={4} style={{ padding: 0, height: "2px", background: "linear-gradient(90deg, #d4a853, transparent)" }} /></tr>
           </thead>
           <tbody>
             {ranked.map((row, idx) => {
@@ -205,20 +222,21 @@ export default function SponsorshipLeaderboard() {
                   key={row.name}
                   className="text-center uppercase"
                   style={{
-                    height: `${rowHeight}vh`,
-                    maxHeight: "12vh",
-                    background: idx % 2 === 0 ? "linear-gradient(90deg, #111111, #151515)" : "linear-gradient(90deg, #1a1a1a, #1e1e1e)",
+                    background: idx % 2 === 0 ? "linear-gradient(90deg, #4A4A4A, #505050)" : "linear-gradient(90deg, #73787C, #7A7F83)",
                     color: "#ffffff",
                     borderBottom: "0.5px solid #222",
                   }}
                 >
-                  <td className="px-1 py-1 font-mono font-bold" style={{ color, textShadow: `0 0 8px ${color}40, 0 0 20px ${color}20`, fontSize: "1.25em" }}>
+                  <td className="px-1 py-1 font-mono font-bold" style={{ color, textShadow: rank <= 3 ? `0 1px 3px rgba(0,0,0,0.8), 0 0 8px ${color}40, 0 0 20px ${color}20` : "0 1px 3px rgba(0,0,0,0.8)", fontSize: "1.25em" }}>
                     #{rank}
                   </td>
                   <td className="px-1 py-1 text-left" style={{ fontWeight: 300 }}>
                     {row.name}
                   </td>
-                  <td className="px-1 py-1 pr-3 text-right font-mono font-bold" style={{ color: row.total > 0 ? "#22c55e" : "#555" }}>
+                  <td className="px-1 py-1 text-right font-mono font-bold" style={{ color: row.quarter > 0 ? "#ffffff" : "#bbbbbb", textShadow: "0 1px 3px rgba(0,0,0,0.8)" }}>
+                    {formatCurrency(row.quarter)}
+                  </td>
+                  <td className="px-1 py-1 pr-3 text-right font-mono font-bold" style={{ color: row.total > 0 ? "#00ff88" : "#bbbbbb", textShadow: row.total > 0 ? "0 1px 3px rgba(0,0,0,0.8), 0 0 12px rgba(0,255,136,0.3)" : "none" }}>
                     {formatCurrency(row.total)}
                   </td>
                 </tr>
@@ -227,18 +245,20 @@ export default function SponsorshipLeaderboard() {
             <tr
               className="text-center uppercase"
               style={{
-                height: `${rowHeight}vh`,
-                maxHeight: "12vh",
-                background: "linear-gradient(90deg, #1a1a1a, #2a2416)",
-                borderTop: "2px solid #d4a853",
-                color: "#d4a853",
+                background: "linear-gradient(90deg, #2a2a2a, #3a3020)",
+                borderTop: "2px solid rgba(212, 168, 83, 0.6)",
+                color: "#f0c668",
+                textShadow: "0 1px 3px rgba(0,0,0,0.8)",
               }}
             >
               <td className="px-1 py-1" />
               <td className="px-1 py-1 text-left font-semibold" style={{ letterSpacing: "0.12em" }}>
                 Total
               </td>
-              <td className="px-1 py-1 pr-3 text-right font-mono font-bold" style={{ fontSize: "1.1em", textShadow: "0 0 8px #d4a85340, 0 0 20px #d4a85320" }}>
+              <td className="px-1 py-1 text-right font-mono font-bold" style={{ fontSize: "1.1em", textShadow: "0 1px 3px rgba(0,0,0,0.8), 0 0 8px #d4a85340, 0 0 20px #d4a85320" }}>
+                {formatCurrency(quarterGrandTotal)}
+              </td>
+              <td className="px-1 py-1 pr-3 text-right font-mono font-bold" style={{ fontSize: "1.1em", textShadow: "0 1px 3px rgba(0,0,0,0.8), 0 0 8px #d4a85340, 0 0 20px #d4a85320" }}>
                 {formatCurrency(data.grandTotal)}
               </td>
             </tr>
