@@ -93,6 +93,7 @@ export default function SponsorshipLeaderboard() {
         total: data.totals[name] ?? 0,
         quarter: data.quarterTotals?.[name] ?? 0,
       }))
+      .filter((r) => r.total > 0 || r.quarter > 0)
       .sort((a, b) => b.total - a.total);
   }, [data]);
 
@@ -117,16 +118,19 @@ export default function SponsorshipLeaderboard() {
     );
   }
 
-  const rowCount = ranked.length + 1;
+  const rowCount = Math.max(ranked.length + 1, 1);
   const effectiveCount = Math.min(rowCount, 12);
-  const fontSize = `clamp(2rem, calc(1.2vw + ${13 / effectiveCount}vw), 7rem)`;
-  const headerSize = `clamp(1.2rem, calc(0.75vw + ${7 / effectiveCount}vw), 4rem)`;
-  const mFontSize = `clamp(1.3rem, calc(1.6vw + ${13.5 / effectiveCount}vw), 6.5rem)`;
-  const mHeaderSize = `clamp(1rem, calc(1.1vw + ${8.5 / effectiveCount}vw), 4rem)`;
+  // Dynamic row height: distribute available viewport height across data + total rows
+  const rowHeightVh = 82 / rowCount;
+  // Font size uses whichever is smaller: width-based or row-height-based, so it fits both dimensions
+  const fontSize = `clamp(0.85rem, min(calc(0.8vw + ${9 / effectiveCount}vw), ${rowHeightVh * 0.5}vh), 5rem)`;
+  const headerSize = `clamp(0.7rem, min(calc(0.5vw + ${5 / effectiveCount}vw), ${rowHeightVh * 0.35}vh), 2.8rem)`;
+  const mFontSize = `clamp(0.8rem, min(calc(1.2vw + ${9.5 / effectiveCount}vw), ${rowHeightVh * 0.5}vh), 4.5rem)`;
+  const mHeaderSize = `clamp(0.65rem, min(calc(0.8vw + ${6 / effectiveCount}vw), ${rowHeightVh * 0.35}vh), 2.8rem)`;
 
   return (
     <div
-      className="flex flex-col justify-center h-screen pt-4 pb-8 px-0 md:px-4 overflow-hidden"
+      className="flex flex-col justify-center h-screen px-0 md:px-4 overflow-hidden"
       style={{ backgroundColor: "#2a2a2a" }}
       onClick={(e) => {
         if (e.clientY > window.innerHeight * 0.75) setShowControls((prev) => !prev);
@@ -143,7 +147,7 @@ export default function SponsorshipLeaderboard() {
             <tr className="text-center font-semibold uppercase text-white/90" style={{ fontSize: headerSize, backgroundColor: "#3a3a3a", letterSpacing: "0.12em" }}>
               <th className="px-2 py-3 w-[12%]">Rank</th>
               <th className="pl-0 pr-3 py-3 w-[40%] text-left">Person in Charge</th>
-              <th className="px-3 py-3 w-[24%] text-right">This {data.currentQuarter}</th>
+              <th className="px-3 py-3 w-[24%] text-right">Current Quarter</th>
               <th className="px-3 py-3 w-[24%] text-right">Total Sales</th>
             </tr>
             <tr><td colSpan={4} style={{ padding: 0, height: "2px", background: "linear-gradient(90deg, #d4a853, transparent)" }} /></tr>
@@ -157,6 +161,8 @@ export default function SponsorshipLeaderboard() {
                   key={row.name}
                   className="text-center uppercase"
                   style={{
+                    height: `${rowHeightVh}vh`,
+                    minHeight: "40px",
                     background: idx % 2 === 0 ? "linear-gradient(90deg, #4A4A4A, #505050)" : "linear-gradient(90deg, #73787C, #7A7F83)",
                     color: "#ffffff",
                     borderBottom: "0.5px solid #222",
@@ -180,6 +186,8 @@ export default function SponsorshipLeaderboard() {
             <tr
               className="text-center uppercase"
               style={{
+                height: `${rowHeightVh}vh`,
+                minHeight: "40px",
                 background: "linear-gradient(90deg, #2a2a2a, #3a3020)",
                 borderTop: "2px solid rgba(212, 168, 83, 0.6)",
                 color: "#f0c668",
@@ -222,6 +230,8 @@ export default function SponsorshipLeaderboard() {
                   key={row.name}
                   className="text-center uppercase"
                   style={{
+                    height: `${rowHeightVh}vh`,
+                    minHeight: "40px",
                     background: idx % 2 === 0 ? "linear-gradient(90deg, #4A4A4A, #505050)" : "linear-gradient(90deg, #73787C, #7A7F83)",
                     color: "#ffffff",
                     borderBottom: "0.5px solid #222",
@@ -245,6 +255,8 @@ export default function SponsorshipLeaderboard() {
             <tr
               className="text-center uppercase"
               style={{
+                height: `${rowHeightVh}vh`,
+                minHeight: "40px",
                 background: "linear-gradient(90deg, #2a2a2a, #3a3020)",
                 borderTop: "2px solid rgba(212, 168, 83, 0.6)",
                 color: "#f0c668",
