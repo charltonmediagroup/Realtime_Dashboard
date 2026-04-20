@@ -46,6 +46,9 @@ export default function Home() {
           <Link href="/dashboard/bizzcon" className="hover:underline mt-8">
             Bizzcon
           </Link>
+          <Link href="/dashboard/bizzcon/leaderboard" className="hover:underline ml-8">
+            Leaderboard
+          </Link>
 
           <Link href="/all-active?grouped=true" className="hover:underline mt-4">
             View active users

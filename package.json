@@ -12,6 +12,7 @@
     "@google-analytics/data": "^5.2.1",
     "cheerio": "^1.2.0",
     "framer-motion": "^12.23.26",
+    "googleapis": "^171.4.0",
     "mongodb": "^7.0.0",
     "next": "^16.0.10",
     "react": "^19.2.3",
@@ -24,6 +25,7 @@
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.0.10",
+    "open": "^11.0.0",
     "tailwindcss": "^4",
     "typescript": "^5"
   }
