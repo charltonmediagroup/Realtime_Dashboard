@@ -93,13 +93,21 @@ export default function BizzconGridClient({ events }: BizzconGridProps) {
   const count = pageSize || 1;
   const effectiveCount = Math.min(count, 12);
   const rowHeight = Math.floor(80 / effectiveCount);
-  const fontSize = `clamp(1rem, calc(0.8vw + ${9.5 / effectiveCount}vw), 6rem)`;
-  const headerSize = `clamp(0.9rem, calc(0.55vw + ${5.5 / effectiveCount}vw), 3.8rem)`;
+  const fontSize = effectiveCount <= 6
+    ? `clamp(1rem, calc(0.8vw + ${9.5 / effectiveCount}vw), 6rem)`
+    : `clamp(0.9rem, calc(0.6vw + ${7 / effectiveCount}vw), 2.8rem)`;
+  const headerSize = effectiveCount <= 6
+    ? `clamp(0.9rem, calc(0.55vw + ${5.5 / effectiveCount}vw), 3.8rem)`
+    : `clamp(0.75rem, calc(0.4vw + ${4 / effectiveCount}vw), 2rem)`;
   const imgSize = effectiveCount <= 6
     ? Math.max(88, Math.min(320, 1050 / effectiveCount))
-    : Math.max(56, Math.min(260, 780 / effectiveCount));
-  const mFontSize = `clamp(0.95rem, calc(1.15vw + ${11.5 / effectiveCount}vw), 6rem)`;
-  const mHeaderSize = `clamp(0.8rem, calc(0.8vw + ${7 / effectiveCount}vw), 3.8rem)`;
+    : Math.max(72, Math.min(280, 980 / effectiveCount));
+  const mFontSize = effectiveCount <= 6
+    ? `clamp(0.95rem, calc(1.15vw + ${11.5 / effectiveCount}vw), 6rem)`
+    : `clamp(0.85rem, calc(0.85vw + ${8 / effectiveCount}vw), 2.8rem)`;
+  const mHeaderSize = effectiveCount <= 6
+    ? `clamp(0.8rem, calc(0.8vw + ${7 / effectiveCount}vw), 3.8rem)`
+    : `clamp(0.7rem, calc(0.55vw + ${5 / effectiveCount}vw), 2rem)`;
   const mImgSize = Math.max(32, Math.min(130, 420 / effectiveCount));
 
   const handlePageSizeChange = (size: number) => {
@@ -199,7 +207,7 @@ export default function BizzconGridClient({ events }: BizzconGridProps) {
                   </div>
                 </td>
                 <td className="pl-0 pr-2 py-1 text-left" style={{ fontWeight: 300 }}>
-                  {evt && <span className="line-clamp-2" dangerouslySetInnerHTML={{ __html: evt.title }} />}
+                  {evt && <span className="line-clamp-2" style={{ lineHeight: 1.15 }} dangerouslySetInnerHTML={{ __html: evt.title }} />}
                 </td>
                 <td className="px-2 py-1" style={{ fontWeight: 300 }}>{evt?.city || ""}</td>
                 <td className="px-2 py-1 font-mono font-bold" style={{ fontSize: "1.5em" }}>
@@ -249,7 +257,7 @@ export default function BizzconGridClient({ events }: BizzconGridProps) {
                           unoptimized
                         />
                       )}
-                      <span className="line-clamp-2" dangerouslySetInnerHTML={{ __html: evt.title }} />
+                      <span className="line-clamp-2" style={{ lineHeight: 1.15 }} dangerouslySetInnerHTML={{ __html: evt.title }} />
                     </div>
                   )}
                 </td>
