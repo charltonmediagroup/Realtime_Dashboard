@@ -24,7 +24,7 @@ export default function TickerCard({
     const [currentIndex, setCurrentIndex] = useState(0);
     const scrollRef = useRef<HTMLDivElement>(null);
     const headlineRef = useRef<HTMLDivElement>(null);
-    const [scrolling, setScrolling] = useState(false);
+    const [, setScrolling] = useState(false);
 
     const feedUrls = Array.isArray(feedUrl) ? feedUrl : [feedUrl];
     const feedKey = feedUrls.join("|");
@@ -89,7 +89,7 @@ export default function TickerCard({
             setScrolling(true);
             const SCROLL_PADDING = 24;
             const distance = headlineWidth - containerWidth + SCROLL_PADDING;
-            const speed = 50; // pixels per second
+            const speed = 30; // pixels per second
             const scrollDuration = (distance / speed) * 1000;
 
             const startTimeout = setTimeout(() => {
@@ -152,25 +152,26 @@ const styles = {
     ticker: {
         display: "flex",
         alignItems: "center",
-        fontSize: "clamp(1.25rem, 1.5vw, 1.75rem)",
+        fontSize: "clamp(1.5rem, 1.8vw, 2.1rem)",
         color: "black",
-        height: "50px",
+        height: "65px",
         fontFamily: '"DIN-Bold", Arial, sans-serif',
         overflow: "hidden",
         width: "100%",
         backgroundColor:"#F0F0F0"
     },
     label: {
-        width: "clamp(90px, 8vw, 170px)",
+        width: "clamp(130px, 10vw, 200px)",
         fontWeight: 700,
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
         textTransform: "uppercase" as const,
         color: "white",
-        height: "100%",
+        alignSelf: "stretch",
         flexShrink: 0,
-        fontSize: "clamp(12px, 1.2vw, 24px)",
+        fontSize: "clamp(14px, 1.4vw, 28px)",
+        whiteSpace: "nowrap" as const,
     },
     scroll: {
         flex: 1,
@@ -178,7 +179,7 @@ const styles = {
         overflow: "hidden",
         display: "flex",
         alignItems: "center",
-        minHeight: "50px",
+        minHeight: "65px",
     },
     headline: {
         position: "absolute" as const,
@@ -189,7 +190,7 @@ const styles = {
         paddingLeft: "10px",
         fontWeight: 700,
         textTransform: "uppercase" as const,
-        fontSize: "clamp(12px, 1.2vw, 24px)",
+        fontSize: "clamp(14px, 1.4vw, 28px)",
         lineHeight: 1.2,
         whiteSpace: "nowrap",
         overflow: "hidden",
@@ -207,7 +208,7 @@ const styles = {
         paddingLeft: "10px",
         fontWeight: 700,
         textTransform: "uppercase" as const,
-        fontSize: "clamp(12px, 1.2vw, 24px)",
+        fontSize: "clamp(14px, 1.4vw, 28px)",
         lineHeight: 1.2,
         whiteSpace: "nowrap",
         overflow: "hidden",

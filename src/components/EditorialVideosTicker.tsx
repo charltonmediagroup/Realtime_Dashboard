@@ -57,7 +57,7 @@ export default function EditorialVideosTicker() {
 
   return (
     <footer className="fixed bottom-0 left-0 z-50 w-full md:static">
-      <div className="flex flex-col md:space-y-0 gap-0">
+      <div className="flex flex-col md:space-y-0 gap-0" style={{ boxShadow: "0 -6px 20px rgba(0,0,0,0.25)" }}>
         {exclusiveFeeds.length > 0 && (
           <div className="flex-1 min-w-0">
             <TickerCard feedUrl={exclusiveFeeds} duration={4000} />
@@ -65,7 +65,7 @@ export default function EditorialVideosTicker() {
         )}
         {newsFeeds.length > 0 && (
           <div className="flex-1 min-w-0">
-            <TickerStrip feedUrl={newsFeeds} speed={100} />
+            <TickerStrip feedUrl={newsFeeds} speed={60} />
           </div>
         )}
       </div>

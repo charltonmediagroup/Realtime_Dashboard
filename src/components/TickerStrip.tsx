@@ -1,6 +1,5 @@
 "use client";
 
-import { color } from "framer-motion";
 import { useEffect, useRef, useState } from "react";
 
 interface TickerStripProps {
@@ -17,7 +16,6 @@ export default function TickerStrip({
   feedUrl,
   label = "Latest News",
   speed = 100,
-  backgroundColor = "#FF0000",
   labelColor = "#074782",
   limit = 10,
   refreshIntervalMs = 10 * 60 * 1000,
@@ -156,24 +154,25 @@ const styles = {
     flexShrink: 1,     // allow ticker to shrink if needed
     flexBasis: 0,      // allows equal split in horizontal row
     overflow: "hidden",
-    fontSize: "clamp(1.25rem, 1.5vw, 1.75rem)",
-    height: "50px",
+    fontSize: "clamp(1.5rem, 1.8vw, 2.1rem)",
+    height: "65px",
     fontFamily: '"DIN-Bold", Arial, sans-serif',
     backgroundColor: "#FF0000",
     minWidth: 0,       // crucial: prevent content from forcing extra width
   },
   label: {
-    width: "clamp(90px, 8vw, 170px)",
+    width: "clamp(130px, 10vw, 200px)",
     fontWeight: "bold" as const,
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
     textTransform: "uppercase" as const,
-    height: "100%",
+    alignSelf: "stretch",
     flexShrink: 0,
     textShadow: "0 0 5px rgba(0,0,0,0.5)",
     color: "white",
-    fontSize: "clamp(12px, 1.2vw, 24px)",
+    fontSize: "clamp(14px, 1.4vw, 28px)",
+    whiteSpace: "nowrap" as const,
   },
   scroll: {
     flex: 1,
@@ -187,7 +186,7 @@ const styles = {
   headlines: {
     display: "inline-block",
     fontWeight: "bold" as const,
-    fontSize: "clamp(12px, 1.2vw, 24px)",
+    fontSize: "clamp(14px, 1.4vw, 28px)",
     whiteSpace: "nowrap" as const,
     backgroundColor: "#FF0000",
   },
