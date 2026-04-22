@@ -3,16 +3,21 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
+const WAIT_MODE_KEY = "shortsWaitMode";
+const WAIT_MODE_EVENT = "shortsModeChange";
+
 export default function VideoPageControls() {
   const router = useRouter();
   const [visible, setVisible] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [waitMode, setWaitMode] = useState(false);
   const hideTimer = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     const onFsChange = () => setIsFullscreen(!!document.fullscreenElement);
     document.addEventListener("fullscreenchange", onFsChange);
     setIsFullscreen(!!document.fullscreenElement);
+    setWaitMode(localStorage.getItem(WAIT_MODE_KEY) === "true");
     return () => document.removeEventListener("fullscreenchange", onFsChange);
   }, []);
 
@@ -45,13 +50,29 @@ export default function VideoPageControls() {
     }
   };
 
+  const toggleWaitMode = () => {
+    const next = !waitMode;
+    setWaitMode(next);
+    localStorage.setItem(WAIT_MODE_KEY, String(next));
+    window.dispatchEvent(new Event(WAIT_MODE_EVENT));
+  };
+
   if (!visible) return null;
 
   return (
     <div
-      className="fixed bottom-5 left-1/2 -translate-x-1/2 z-50 flex gap-3"
+      className="fixed bottom-5 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3"
       onClick={(e) => e.stopPropagation()}
     >
+      <label className="flex items-center gap-2 px-4 py-2 rounded bg-black/70 text-white cursor-pointer select-none">
+        <input
+          type="checkbox"
+          checked={waitMode}
+          onChange={toggleWaitMode}
+          className="accent-blue-500"
+        />
+        Finish shorts before changing
+      </label>
       <button
         onClick={toggleFullscreen}
         className="px-4 py-2 rounded bg-black/70 text-white hover:bg-black/90"
