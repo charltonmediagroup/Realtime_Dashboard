@@ -3,6 +3,19 @@
 import { useEffect, useRef } from "react";
 import Player from "@vimeo/player";
 
+const AWARDS_BLOCKLIST = [
+  "Awards Promo Video",
+  "Awards Promo",
+  "Awards",
+];
+
+const AWARDS_FILTER = new RegExp(
+  [
+    ...AWARDS_BLOCKLIST.map(k => k.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")),
+    "Awards \\d{4}",
+  ].join("|"),
+);
+
 interface EditorialVideosRotatorProps {
   xmlUrl?: string | string[];
   videos?: { title: string; link: string }[];
@@ -58,7 +71,7 @@ export default function EditorialVideosRotator({
           title: item.querySelector("title")?.textContent?.trim() || "",
           link: item.querySelector("description")?.textContent?.trim() || "",
         }))
-        .filter(v => v.link.includes("vimeo.com") && !/Awards/i.test(v.title));
+        .filter(v => v.link.includes("vimeo.com") && !AWARDS_FILTER.test(v.title));
     };
 
     Promise.all(

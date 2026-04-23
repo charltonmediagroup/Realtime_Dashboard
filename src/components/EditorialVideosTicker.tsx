@@ -60,12 +60,20 @@ export default function EditorialVideosTicker() {
       <div className="flex flex-col md:space-y-0 gap-0" style={{ boxShadow: "0 -6px 20px rgba(0,0,0,0.25)" }}>
         {exclusiveFeeds.length > 0 && (
           <div className="flex-1 min-w-0">
-            <TickerCard feedUrl={exclusiveFeeds} duration={4000} />
+            <TickerCard
+              feedUrl={exclusiveFeeds}
+              duration={4000}
+              fontSize="clamp(20px, 2vw, 38px)"
+            />
           </div>
         )}
         {newsFeeds.length > 0 && (
           <div className="flex-1 min-w-0">
-            <TickerStrip feedUrl={newsFeeds} speed={60} />
+            <TickerStrip
+              feedUrl={newsFeeds}
+              speed={60}
+              fontSize="clamp(20px, 2vw, 38px)"
+            />
           </div>
         )}
       </div>

@@ -10,6 +10,8 @@ interface TickerCardProps {
     labelColor?: string;
     limit?: number;
     refreshIntervalMs?: number;
+    fontSize?: string;
+    height?: string;
 }
 
 export default function TickerCard({
@@ -19,6 +21,8 @@ export default function TickerCard({
     labelColor = "#ff0000",
     limit = 10,
     refreshIntervalMs = 10 * 60 * 1000,
+    fontSize,
+    height,
 }: TickerCardProps) {
     const [headlines, setHeadlines] = useState<string[]>([]);
     const [currentIndex, setCurrentIndex] = useState(0);
@@ -119,14 +123,15 @@ export default function TickerCard({
     }, [currentIndex, headlines, duration]);
 
     return (
-        <div style={styles.ticker}>
+        <div style={{ ...styles.ticker, ...(height ? { height } : null) }}>
             <div style={{ ...styles.label, backgroundColor: labelColor }}>{label}</div>
-            <div style={styles.scroll} ref={scrollRef}>
+            <div style={{ ...styles.scroll, ...(height ? { minHeight: height } : null) }} ref={scrollRef}>
                 {headlines.map((h, i) => (
                     <div
                         key={i}
                         style={{
                             ...styles.headlineWrapper,
+                            ...(fontSize ? { fontSize } : null),
                             opacity: i === currentIndex ? 1 : 0,
                             transform:
                                 i === currentIndex
