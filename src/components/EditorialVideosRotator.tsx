@@ -319,7 +319,7 @@ export default function EditorialVideosRotator({
 
         .caption-overlay {
           position: absolute;
-          bottom: 8%;
+          bottom: 15%;
           left: 50%;
           transform: translateX(-50%);
           z-index: 10;
@@ -327,7 +327,7 @@ export default function EditorialVideosRotator({
           text-align: center;
           pointer-events: none;
           color: white;
-          font-size: clamp(14px, 1.8vw, 22px);
+          font-size: clamp(22px, 3.2vw, 42px);
           line-height: 1.5;
           white-space: pre-line;
         }
