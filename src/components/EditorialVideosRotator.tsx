@@ -14,6 +14,7 @@ const AWARDS_FILTER = new RegExp(
     ...AWARDS_BLOCKLIST.map(k => k.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")),
     "Awards \\d{4}",
   ].join("|"),
+  "i",
 );
 
 interface EditorialVideosRotatorProps {
