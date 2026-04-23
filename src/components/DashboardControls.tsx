@@ -16,6 +16,7 @@ export default function DashboardControls({
   const [visible, setVisible] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+  const hideTimer = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     const onFsChange = () => setIsFullscreen(!!document.fullscreenElement);
@@ -45,6 +46,24 @@ export default function DashboardControls({
       window.removeEventListener("touchstart", onActivity);
     };
   }, []);
+
+  useEffect(() => {
+    if (!visible) return;
+    const resetTimer = () => {
+      if (hideTimer.current) clearTimeout(hideTimer.current);
+      hideTimer.current = setTimeout(() => setVisible(false), 5000);
+    };
+    resetTimer();
+    window.addEventListener("mousemove", resetTimer);
+    window.addEventListener("touchmove", resetTimer, { passive: true });
+    window.addEventListener("keydown", resetTimer);
+    return () => {
+      if (hideTimer.current) clearTimeout(hideTimer.current);
+      window.removeEventListener("mousemove", resetTimer);
+      window.removeEventListener("touchmove", resetTimer);
+      window.removeEventListener("keydown", resetTimer);
+    };
+  }, [visible]);
 
   const toggleFullscreen = () => {
     if (!document.fullscreenElement) {
