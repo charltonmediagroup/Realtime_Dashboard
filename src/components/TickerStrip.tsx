@@ -10,6 +10,8 @@ interface TickerStripProps {
   labelColor?: string;
   limit?: number;
   refreshIntervalMs?: number;
+  fontSize?: string;
+  height?: string;
 }
 
 export default function TickerStrip({
@@ -19,6 +21,8 @@ export default function TickerStrip({
   labelColor = "#074782",
   limit = 10,
   refreshIntervalMs = 10 * 60 * 1000,
+  fontSize,
+  height,
 }: TickerStripProps) {
   const [headlines, setHeadlines] = useState<string[]>([]);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -113,7 +117,7 @@ export default function TickerStrip({
   }, [headlines, speed]);
 
   return (
-    <div style={{ ...styles.ticker }}>
+    <div style={{ ...styles.ticker, ...(height ? { height } : null) }}>
       <style>
         {`
           @font-face {
@@ -132,9 +136,9 @@ export default function TickerStrip({
           }
         `}
       </style>
-      <div style={{ ...styles.label, backgroundColor: labelColor }}>{label}</div>
+      <div style={{ ...styles.label, backgroundColor: labelColor, ...(fontSize ? { fontSize } : null) }}>{label}</div>
       <div ref={containerRef} style={styles.scroll}>
-        <span ref={headlinesRef} style={styles.headlines}>
+        <span ref={headlinesRef} style={{ ...styles.headlines, ...(fontSize ? { fontSize } : null) }}>
           {headlines.map((h, i) => (
             <span key={i} style={styles.item}>
               {h.toUpperCase()}

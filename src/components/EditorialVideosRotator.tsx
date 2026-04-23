@@ -334,7 +334,7 @@ export default function EditorialVideosRotator({
 
         .caption-overlay {
           position: absolute;
-          bottom: 15%;
+          bottom: 20%;
           left: 50%;
           transform: translateX(-50%);
           z-index: 10;
