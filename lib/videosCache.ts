@@ -1,69 +1,111 @@
 import { getCollection } from "@/lib/mongodb";
-import { fetchVimeoVideos, fetchVimeoVideosByBrand, VimeoVideo } from "@/lib/vimeo";
+import { fetchVimeoVideos, VimeoVideo } from "@/lib/vimeo";
 
-interface BrandVideoCache {
+const REFRESH_INTERVAL = 60 * 60 * 1000;  // 1 hour between incremental refreshes
+const INITIAL_BACKFILL_COUNT = 300;       // one-time full fetch (manual: ?backfill=true)
+const RECENT_FETCH_COUNT = 25;            // incremental refresh size
+const LIBRARY_UID = "videos-library";
+
+interface VideoLibrary {
   videos: VimeoVideo[];
-  timestamp: number;
+  lastRefresh: number;
+  lastFullSync: number;
 }
 
-const CACHE_DURATION = 60 * 60 * 1000; // 1 hour
-const MONGO_CACHE_UID = "videos-brand-cache";
+// In-memory mirror to avoid hitting Mongo on every request
+let memoryLib: VideoLibrary | null = null;
 
-const memoryCache: Record<string, BrandVideoCache> = {};
-
-async function getDbCache(): Promise<Record<string, BrandVideoCache>> {
+async function loadLib(): Promise<VideoLibrary> {
+  if (memoryLib) return memoryLib;
   try {
     const col = await getCollection("dashboard-config");
-    const doc = await col.findOne({ uid: MONGO_CACHE_UID });
-    return doc?.data || {};
+    const doc = await col.findOne({ uid: LIBRARY_UID });
+    const data = doc?.data as Partial<VideoLibrary> | undefined;
+    memoryLib = {
+      videos: data?.videos ?? [],
+      lastRefresh: data?.lastRefresh ?? 0,
+      lastFullSync: data?.lastFullSync ?? 0,
+    };
   } catch {
-    return {};
+    memoryLib = { videos: [], lastRefresh: 0, lastFullSync: 0 };
   }
+  return memoryLib;
 }
 
-async function saveDbCache(cache: Record<string, BrandVideoCache>) {
+async function saveLib(lib: VideoLibrary) {
+  memoryLib = lib;
   try {
     const col = await getCollection("dashboard-config");
     await col.updateOne(
-      { uid: MONGO_CACHE_UID },
-      { $set: { uid: MONGO_CACHE_UID, data: cache } },
+      { uid: LIBRARY_UID },
+      { $set: { uid: LIBRARY_UID, data: lib } },
       { upsert: true },
     );
   } catch (err) {
-    console.warn("Failed to save videos cache to MongoDB:", err);
+    console.warn("Failed to save videos library to MongoDB:", err);
   }
 }
 
+function sortByCreatedDesc(videos: VimeoVideo[]): VimeoVideo[] {
+  return [...videos].sort((a, b) => b.createdTime.localeCompare(a.createdTime));
+}
+
+function mergeUpsert(existing: VimeoVideo[], fresh: VimeoVideo[]): VimeoVideo[] {
+  const byId = new Map<string, VimeoVideo>();
+  for (const v of existing) byId.set(v.id, v);
+  for (const v of fresh) byId.set(v.id, v); // fresh wins
+  return sortByCreatedDesc(Array.from(byId.values()));
+}
+
+/**
+ * Get the video library.
+ * - First ever call (empty library): full backfill of INITIAL_BACKFILL_COUNT videos.
+ * - After REFRESH_INTERVAL: incremental refresh — fetch RECENT_FETCH_COUNT newest, upsert.
+ * - forceBackfill=true: re-run the full backfill on demand.
+ * - brandTag: if provided, filter by tag (case-insensitive).
+ */
 export async function getCachedVideos(
   brandTag?: string,
-  forceRefresh = false,
+  forceBackfill = false,
 ): Promise<VimeoVideo[]> {
   const now = Date.now();
-  const cacheKey = brandTag || "__all__";
+  const lib = await loadLib();
 
-  // Load MongoDB cache into memory on cold start
-  if (!forceRefresh && Object.keys(memoryCache).length === 0) {
-    const dbCache = await getDbCache();
-    for (const [key, entry] of Object.entries(dbCache)) {
-      if (entry.timestamp && now - entry.timestamp < CACHE_DURATION) {
-        memoryCache[key] = entry;
-      }
+  const needsFullSync = forceBackfill || lib.videos.length === 0;
+  const needsIncremental =
+    !needsFullSync && now - lib.lastRefresh > REFRESH_INTERVAL;
+
+  if (needsFullSync) {
+    try {
+      const fresh = await fetchVimeoVideos(undefined, INITIAL_BACKFILL_COUNT);
+      // Replace library entirely — drops videos deleted on Vimeo.
+      await saveLib({
+        videos: sortByCreatedDesc(fresh),
+        lastRefresh: now,
+        lastFullSync: now,
+      });
+    } catch (err) {
+      console.warn("Full re-sync failed, serving stale library:", err);
+    }
+  } else if (needsIncremental) {
+    try {
+      const recent = await fetchVimeoVideos(undefined, RECENT_FETCH_COUNT);
+      const merged = mergeUpsert(lib.videos, recent);
+      await saveLib({
+        videos: merged,
+        lastRefresh: now,
+        lastFullSync: lib.lastFullSync,
+      });
+    } catch (err) {
+      console.warn("Incremental refresh failed, serving stale library:", err);
     }
   }
 
-  const cached = memoryCache[cacheKey];
-  if (!forceRefresh && cached && now - cached.timestamp < CACHE_DURATION) {
-    return cached.videos;
+  const current = memoryLib?.videos ?? [];
+
+  if (brandTag) {
+    const t = brandTag.toLowerCase();
+    return current.filter((v) => v.tags?.includes(t));
   }
-
-  const videos = brandTag
-    ? await fetchVimeoVideosByBrand(brandTag)
-    : await fetchVimeoVideos();
-
-  memoryCache[cacheKey] = { videos, timestamp: now };
-
-  // Persist to MongoDB in background
-  saveDbCache({ ...memoryCache });
-
-  return videos;
+  return current;
 }

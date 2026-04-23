@@ -4,7 +4,8 @@ import { useEffect, useRef } from "react";
 import Player from "@vimeo/player";
 
 interface EditorialVideosRotatorProps {
-  xmlUrl: string | string[];
+  xmlUrl?: string | string[];
+  videos?: { title: string; link: string }[];
   displayTime?: number;
   startIndex?: number;
   onError?: () => void;
@@ -12,6 +13,7 @@ interface EditorialVideosRotatorProps {
 
 export default function EditorialVideosRotator({
   xmlUrl,
+  videos: directVideos,
   displayTime = 30,
   startIndex = 0,
   onError,
@@ -28,11 +30,24 @@ export default function EditorialVideosRotator({
   const showingA = useRef(true);
   const intervalRef = useRef<number | null>(null);
 
-  const urlList = Array.isArray(xmlUrl) ? xmlUrl : [xmlUrl];
+  const urlList = Array.isArray(xmlUrl) ? xmlUrl : xmlUrl ? [xmlUrl] : [];
   const urlKey = urlList.join("|");
+  const directKey = directVideos ? directVideos.map((v) => v.link).join("|") : "";
+
+  /* ---------- LOAD DIRECT VIDEOS ---------- */
+  useEffect(() => {
+    if (!directVideos || !directVideos.length) return;
+    videos.current = directVideos.filter((v) => v.link.includes("vimeo.com"));
+    if (!videos.current.length) return;
+    showInitial();
+    intervalRef.current = window.setInterval(nextVideo, displayTime * 1000);
+    return cleanup;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [directKey, displayTime]);
 
   /* ---------- LOAD XML ---------- */
   useEffect(() => {
+    if (directVideos && directVideos.length) return;
     const urls = urlList.filter(Boolean);
     if (!urls.length) return;
 

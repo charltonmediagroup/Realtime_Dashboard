@@ -7,6 +7,7 @@ import { Video } from "@/src/components/VideosPlayer";
 interface LongFormPlayerProps {
   videos?: Video[];
   brand?: string;
+  fetchUrl?: string;
   className?: string;
   rotationInterval?: number;
 }
@@ -20,6 +21,7 @@ function formatDuration(seconds: number): string {
 export default function LongFormPlayer({
   videos: initialVideos,
   brand,
+  fetchUrl,
   className = "",
   rotationInterval = 60_000,
 }: LongFormPlayerProps) {
@@ -31,7 +33,7 @@ export default function LongFormPlayer({
 
   useEffect(() => {
     if (initialVideos) return;
-    const url = brand ? `/api/videos/${brand}` : "/api/videos";
+    const url = fetchUrl || (brand ? `/api/videos/${brand}` : "/api/videos");
     setLoading(true);
     fetch(url)
       .then((res) => {
@@ -41,7 +43,7 @@ export default function LongFormPlayer({
       .then(setVideos)
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false));
-  }, [brand, initialVideos]);
+  }, [brand, fetchUrl, initialVideos]);
 
   useEffect(() => {
     if (initialVideos?.length) setVideos(initialVideos);
