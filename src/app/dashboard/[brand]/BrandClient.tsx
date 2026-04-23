@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import { useSearchParams, useRouter } from "next/navigation";
 import BrandSettingsClient from "./BrandSettingsClient";
+import DashboardControls from "@/src/components/DashboardControls";
 
 const BrandDashboard = dynamic(
   () => import("@/src/components/BrandDashboard"),
@@ -34,13 +35,10 @@ export default function BrandPageClient({ brand }: BrandPageProps) {
 
   const [siteConfig, setSiteConfig] = useState<any | null>(null);
   const [awardsConfig, setAwardsConfig] = useState<any | null>(null);
-  const [showControls, setShowControls] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
-  const [isFullscreen, setIsFullscreen] = useState(false);
 
   const [componentIndex, setComponentIndex] = useState(0);
 
-  const hideTimer = useRef<NodeJS.Timeout | null>(null);
   const rotationTimer = useRef<NodeJS.Timeout | null>(null);
 
   const baseUrl =
@@ -145,60 +143,6 @@ export default function BrandPageClient({ brand }: BrandPageProps) {
     );
   };
 
-  /* ---------------- FULLSCREEN ---------------- */
-
-  useEffect(() => {
-    const handler = () =>
-      setIsFullscreen(!!document.fullscreenElement);
-
-    document.addEventListener("fullscreenchange", handler);
-    handler();
-
-    return () =>
-      document.removeEventListener("fullscreenchange", handler);
-  }, []);
-
-  /* ---------------- AUTO HIDE CONTROLS ---------------- */
-
-  const startHideTimer = () => {
-    if (hideTimer.current) clearTimeout(hideTimer.current);
-    if (showSettings) return;
-
-    hideTimer.current = setTimeout(() => {
-      setShowControls(false);
-    }, 5000);
-  };
-
-  useEffect(() => {
-    if (!showControls || showSettings) return;
-
-    const activity = () => startHideTimer();
-
-    window.addEventListener("mousemove", activity);
-    window.addEventListener("click", activity);
-    window.addEventListener("keydown", activity);
-
-    startHideTimer();
-
-    return () => {
-      if (hideTimer.current) clearTimeout(hideTimer.current);
-
-      window.removeEventListener("mousemove", activity);
-      window.removeEventListener("click", activity);
-      window.removeEventListener("keydown", activity);
-    };
-  }, [showControls, showSettings]);
-
-  /* ---------------- SCREEN CLICK ---------------- */
-
-  const handleScreenClick = (e: React.MouseEvent) => {
-    if (showSettings) return;
-
-    if (e.clientY > window.innerHeight * 0.75) {
-      setShowControls((prev) => !prev);
-    }
-  };
-
   /* ---------------- SETTINGS SAVE ---------------- */
 
   const handleSettingsSave = (params: Record<string, string>) => {
@@ -216,59 +160,16 @@ export default function BrandPageClient({ brand }: BrandPageProps) {
     );
 
   return (
-    <div
-      className="flex flex-col w-screen min-h-screen overflow-hidden"
-      onClick={handleScreenClick}
-    >
+    <div className="flex flex-col w-screen min-h-screen overflow-hidden">
       {/* ---------------- CURRENT COMPONENT ---------------- */}
 
       {components[componentIndex]}
 
-      {/* ---------------- CONTROLS ---------------- */}
-
-      {(showControls || showSettings) && (
-        <div
-          className="fixed bottom-20 left-1/2 -translate-x-1/2 z-50
-          bg-black/80 text-white rounded-xl shadow-lg
-          flex items-center gap-3 px-4 py-3"
-          onClick={(e) => e.stopPropagation()}
-        >
-          <button
-            onClick={prevComponent}
-            className="px-3 py-2 bg-white/10 rounded"
-          >
-            ◀
-          </button>
-
-          <button
-            onClick={nextComponent}
-            className="px-3 py-2 bg-white/10 rounded"
-          >
-            ▶
-          </button>
-
-          <button
-            onClick={() => {
-              if (!document.fullscreenElement)
-                document.documentElement.requestFullscreen();
-              else document.exitFullscreen();
-            }}
-            className="px-4 py-2 bg-white/10 rounded"
-          >
-            {isFullscreen ? "Exit ⛶" : "Fullscreen ⛶"}
-          </button>
-
-          <button
-            onClick={() => {
-              setShowSettings(true);
-              setShowControls(true);
-            }}
-            className="px-4 py-2 bg-white/10 rounded"
-          >
-            ⚙ Settings
-          </button>
-        </div>
-      )}
+      <DashboardControls>
+        <button onClick={prevComponent} className="px-4 py-2 rounded bg-black/40 text-white hover:bg-black/60">◀</button>
+        <button onClick={nextComponent} className="px-4 py-2 rounded bg-black/40 text-white hover:bg-black/60">▶</button>
+        <button onClick={() => setShowSettings(true)} className="px-4 py-2 rounded bg-black/40 text-white hover:bg-black/60">⚙ Settings</button>
+      </DashboardControls>
 
       {/* ---------------- SETTINGS ---------------- */}
 

@@ -1,9 +1,10 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import EditorialVideosRotator from "@/src/components/EditorialVideosRotator";
 import EditorialVideosTicker from "@/src/components/EditorialVideosTicker";
-import VideoPageControls from "@/src/components/VideoPageControls";
+import DashboardControls from "@/src/components/DashboardControls";
 
 interface ApiVideo {
   id: string;
@@ -45,7 +46,9 @@ export default function AwardsVideosPage() {
         </div>
       </div>
       <EditorialVideosTicker />
-      <VideoPageControls />
+      <DashboardControls>
+        <Link href="/dashboard/awards" className="px-4 py-2 rounded bg-black/40 text-white hover:bg-black/60">← Back</Link>
+      </DashboardControls>
       <style>{`
         .fg-video .video-title { display: none !important; }
         .fg-video .video-wrapper {

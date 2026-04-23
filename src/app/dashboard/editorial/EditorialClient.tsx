@@ -4,6 +4,8 @@ import { useEffect, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import { useSearchParams, useRouter } from "next/navigation";
 import { EDITORIAL_DEFAULTS } from "./default";
+import Link from "next/link";
+import DashboardControls from "@/src/components/DashboardControls";
 
 const BrandDashboard = dynamic(() => import("@/src/components/BrandDashboard"), { ssr: false });
 
@@ -49,9 +51,6 @@ export default function EditorialPageClient() {
   const [brands, setBrands] = useState<BrandEntry[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const rotationTimer = useRef<NodeJS.Timeout | null>(null);
-  const hideTimer = useRef<NodeJS.Timeout | null>(null);
-  const [isFullscreen, setIsFullscreen] = useState(false);
-  const [showControls, setShowControls] = useState(false);
 
   /* ---------------- INITIALIZE URL PARAMS ---------------- */
   useEffect(() => {
@@ -76,14 +75,6 @@ export default function EditorialPageClient() {
     const fs = searchParams.get("fullscreen");
     if (fs !== null) setAutoFullscreen(fs === "1");
   }, [searchParams]);
-
-  /* ---------------- FULLSCREEN HANDLING ---------------- */
-  useEffect(() => {
-    setIsFullscreen(!!document.fullscreenElement);
-    const handler = () => setIsFullscreen(!!document.fullscreenElement);
-    document.addEventListener("fullscreenchange", handler);
-    return () => document.removeEventListener("fullscreenchange", handler);
-  }, []);
 
   /* ---------------- FETCH BRANDS ---------------- */
   useEffect(() => {
@@ -128,13 +119,6 @@ export default function EditorialPageClient() {
   return (
     <div
       className="flex flex-col w-screen md:min-h-screen md:overflow-hidden overflow-y-auto overflow-x-hidden"
-      onClick={(e) => {
-        if (e.clientY > window.innerHeight * 0.75) setShowControls(prev => !prev);
-      }}
-      onMouseMove={() => {
-        if (hideTimer.current) clearTimeout(hideTimer.current);
-        hideTimer.current = setTimeout(() => setShowControls(false), 5000);
-      }}
       tabIndex={0}
     >
       {/* BrandDashboard takes full width */}
@@ -149,33 +133,28 @@ export default function EditorialPageClient() {
         videoDurationTime={videoDisplayTime}
       />
 
-      {
-        showControls && (
-          <div className="fixed bottom-20 left-1/2 -translate-x-1/2 z-50 bg-black/80 text-white rounded-xl shadow-lg flex flex-col md:flex-row items-center gap-3 px-4 py-3" onClick={(e) => e.stopPropagation()}>
-            <button onClick={() => setCurrentIndex((i) => (i - 1 + brands.length) % brands.length)} className="px-4 py-2 rounded bg-white/10 hover:bg-white/20">◀ Prev</button>
-
-            <select value={rotationInterval} onChange={(e) => setRotationInterval(Number(e.target.value))} className="px-4 py-2 bg-white/10 text-white rounded hover:bg-white/20 border-none text-sm cursor-pointer focus:outline-none">
-              {ROTATION_OPTIONS.map((opt) => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
-            </select>
-
-            <button onClick={() => setCurrentIndex((i) => (i + 1) % brands.length)} className="px-4 py-2 rounded bg-white/10 hover:bg-white/20">Next ▶</button>
-
-            <button onClick={() => { if (!document.fullscreenElement) document.documentElement.requestFullscreen().catch(() => { }); else document.exitFullscreen().catch(() => { }); }} className="px-4 py-2 rounded bg-white/10 hover:bg-white/20">{isFullscreen ? "Exit ⛶" : "Fullscreen ⛶"}</button>
-
-            <button onClick={() => {
-              const params = new URLSearchParams();
-              if (rotationInterval !== DEFAULTS.rotation) params.set("rotation", String(rotationInterval));
-              if (stripspeed !== DEFAULTS.stripspeed) params.set("stripspeed", String(stripspeed));
-              if (cardduration !== DEFAULTS.cardduration) params.set("cardduration", String(cardduration));
-              if (activeTodayIntervalms !== DEFAULTS.activeTodayIntervalms) params.set("activeTodayIntervalms", String(activeTodayIntervalms));
-              if (activeNowIntervalms !== DEFAULTS.activeNowIntervalms) params.set("activeNowIntervalms", String(activeNowIntervalms));
-              if (videoDisplayTime !== DEFAULTS.videoDisplayTime) params.set("videoDisplayTime", String(videoDisplayTime));
-              if (autoFullscreen !== DEFAULTS.fullscreen) params.set("fullscreen", "1");
-              router.push(`/dashboard/editorial/settings?${params.toString()}`);
-            }} className="px-4 py-2 rounded bg-white/10 hover:bg-white/20">⚙ Settings</button>
-          </div>
-        )
-      }
+      <DashboardControls>
+        <button onClick={() => setCurrentIndex((i) => (i - 1 + brands.length) % brands.length)} className="px-4 py-2 rounded bg-black/40 text-white hover:bg-black/60">◀ Prev</button>
+        <select value={rotationInterval} onChange={(e) => setRotationInterval(Number(e.target.value))} className="px-4 py-2 rounded bg-black/40 text-white hover:bg-black/60 [&>option]:bg-gray-800 [&>option]:text-white">
+          {ROTATION_OPTIONS.map((opt) => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+        </select>
+        <button onClick={() => setCurrentIndex((i) => (i + 1) % brands.length)} className="px-4 py-2 rounded bg-black/40 text-white hover:bg-black/60">Next ▶</button>
+        <button onClick={() => {
+          const params = new URLSearchParams();
+          if (rotationInterval !== DEFAULTS.rotation) params.set("rotation", String(rotationInterval));
+          if (stripspeed !== DEFAULTS.stripspeed) params.set("stripspeed", String(stripspeed));
+          if (cardduration !== DEFAULTS.cardduration) params.set("cardduration", String(cardduration));
+          if (activeTodayIntervalms !== DEFAULTS.activeTodayIntervalms) params.set("activeTodayIntervalms", String(activeTodayIntervalms));
+          if (activeNowIntervalms !== DEFAULTS.activeNowIntervalms) params.set("activeNowIntervalms", String(activeNowIntervalms));
+          if (videoDisplayTime !== DEFAULTS.videoDisplayTime) params.set("videoDisplayTime", String(videoDisplayTime));
+          if (autoFullscreen !== DEFAULTS.fullscreen) params.set("fullscreen", "1");
+          router.push(`/dashboard/editorial/settings?${params.toString()}`);
+        }} className="px-4 py-2 rounded bg-black/40 text-white hover:bg-black/60">⚙ Settings</button>
+        <div className="flex flex-col gap-1">
+          <Link href="/dashboard/editorial/shorts" className="px-4 py-1 rounded bg-black/40 text-white hover:bg-black/60 text-center text-sm">Shorts</Link>
+          <Link href="/dashboard/editorial/videos" className="px-4 py-1 rounded bg-black/40 text-white hover:bg-black/60 text-center text-sm">Videos</Link>
+        </div>
+      </DashboardControls>
     </div >
   );
 }

@@ -1,44 +1,48 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { ReactNode, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
-const WAIT_MODE_KEY = "shortsWaitMode";
-const WAIT_MODE_EVENT = "shortsModeChange";
+interface DashboardControlsProps {
+  children?: ReactNode;
+  className?: string;
+}
 
-export default function VideoPageControls() {
+export default function DashboardControls({
+  children,
+  className = "",
+}: DashboardControlsProps) {
   const router = useRouter();
   const [visible, setVisible] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
-  const [waitMode, setWaitMode] = useState(false);
-  const hideTimer = useRef<NodeJS.Timeout | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const onFsChange = () => setIsFullscreen(!!document.fullscreenElement);
     document.addEventListener("fullscreenchange", onFsChange);
     setIsFullscreen(!!document.fullscreenElement);
-    setWaitMode(localStorage.getItem(WAIT_MODE_KEY) === "true");
     return () => document.removeEventListener("fullscreenchange", onFsChange);
   }, []);
 
   useEffect(() => {
     const onActivity = (e: MouseEvent | TouchEvent) => {
+      if (
+        e.target instanceof Node &&
+        containerRef.current?.contains(e.target)
+      )
+        return;
       const y =
         e instanceof TouchEvent
           ? e.touches[0]?.clientY ?? e.changedTouches[0]?.clientY ?? 0
           : (e as MouseEvent).clientY;
       if (y < window.innerHeight * 0.75) return;
-
-      setVisible(true);
-      if (hideTimer.current) clearTimeout(hideTimer.current);
-      hideTimer.current = setTimeout(() => setVisible(false), 5000);
+      setVisible((v) => !v);
     };
     window.addEventListener("click", onActivity);
     window.addEventListener("touchstart", onActivity, { passive: true });
     return () => {
       window.removeEventListener("click", onActivity);
       window.removeEventListener("touchstart", onActivity);
-      if (hideTimer.current) clearTimeout(hideTimer.current);
     };
   }, []);
 
@@ -50,40 +54,27 @@ export default function VideoPageControls() {
     }
   };
 
-  const toggleWaitMode = () => {
-    const next = !waitMode;
-    setWaitMode(next);
-    localStorage.setItem(WAIT_MODE_KEY, String(next));
-    window.dispatchEvent(new Event(WAIT_MODE_EVENT));
-  };
-
   if (!visible) return null;
 
   return (
     <div
-      className="fixed bottom-5 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3"
+      ref={containerRef}
+      className={`fixed bottom-32 left-1/2 -translate-x-1/2 z-50 flex flex-wrap items-center justify-center gap-3 px-3 py-2 rounded-xl bg-gray-500/30 backdrop-blur-md ring-1 ring-white/15 shadow-lg text-base ${className}`}
       onClick={(e) => e.stopPropagation()}
     >
-      <label className="flex items-center gap-2 px-4 py-2 rounded bg-black/70 text-white cursor-pointer select-none">
-        <input
-          type="checkbox"
-          checked={waitMode}
-          onChange={toggleWaitMode}
-          className="accent-blue-500"
-        />
-        Finish shorts before changing
-      </label>
+      {children}
+      {children && <span className="w-px h-8 bg-white/40" aria-hidden="true" />}
       <button
         onClick={toggleFullscreen}
-        className="px-4 py-2 rounded bg-black/70 text-white hover:bg-black/90"
+        className="px-5 py-3 rounded bg-black/40 text-white text-lg hover:bg-black/60"
       >
         {isFullscreen ? "Exit ⛶" : "Fullscreen ⛶"}
       </button>
       <button
         onClick={() => router.push("/")}
-        className="px-4 py-2 rounded bg-black/70 text-white hover:bg-black/90"
+        className="px-5 py-3 rounded bg-black/40 text-white text-lg hover:bg-black/60"
       >
-        🏠 Home
+        Home
       </button>
     </div>
   );

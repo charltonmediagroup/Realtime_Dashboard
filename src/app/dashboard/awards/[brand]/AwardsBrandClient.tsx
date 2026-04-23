@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import dynamic from "next/dynamic";
 import { useSearchParams, useRouter } from "next/navigation";
 import EditorialBrandSettingsClient from "./BrandSettingsClient";
+import DashboardControls from "@/src/components/DashboardControls";
 
 
 const AwardsDashboard = dynamic(
@@ -41,8 +42,6 @@ export default function AwardsBrandClient({ brand }: BrandPageProps) {
   const [siteConfig, setSiteConfig] = useState<SiteConfig | null>(null);
   const [awardsConfig, setAwardsConfig] = useState<AwardsConfigEntry[] | null>(null);
   const [showSettings, setShowSettings] = useState(false);
-  const [showControls, setShowControls] = useState(false);
-  const hideTimer = useRef<NodeJS.Timeout | null>(null);
 
   const baseUrl =
     process.env.JSON_PROVIDER_URL || process.env.NEXT_PUBLIC_SITE_URL;
@@ -142,26 +141,12 @@ export default function AwardsBrandClient({ brand }: BrandPageProps) {
     setShowSettings(false);
   };
 
-  /* ---------------- SHOW/HIDE CONTROLS ---------------- */
-  const handleUserActivity = (e: React.MouseEvent | React.TouchEvent) => {
-    const clientY = "clientY" in e ? e.clientY : e.touches?.[0]?.clientY ?? 0;
-    if (clientY < window.innerHeight * 0.75) return;
-
-    setShowControls(true);
-    if (hideTimer.current) clearTimeout(hideTimer.current);
-    hideTimer.current = setTimeout(() => setShowControls(false), 5000);
-  };
-
   if (!siteConfig) {
     return <div className="h-screen flex items-center justify-center">Loading…</div>;
   }
 
   return (
-    <div
-      className="flex flex-col w-screen min-h-screen overflow-hidden"
-      onClick={handleUserActivity}
-      onTouchStart={handleUserActivity}
-    >
+    <div className="flex flex-col w-screen min-h-screen overflow-hidden">
       <AwardsDashboard
         key={searchParams.toString()} // force re-render on param change
         brand={brand}
@@ -174,33 +159,14 @@ export default function AwardsBrandClient({ brand }: BrandPageProps) {
         videoDurationTime={videoDisplayTime}
       />
 
-      {/* Controls */}
-      {showControls && (
-        <div
-          className="fixed bottom-5 left-1/2 -translate-x-1/2 z-50 flex gap-3"
-          onClick={(e) => e.stopPropagation()}
+      <DashboardControls>
+        <button
+          onClick={() => setShowSettings(true)}
+          className="px-4 py-2 rounded bg-black/40 text-white hover:bg-black/60"
         >
-          <button
-            onClick={() => {
-              if (!document.fullscreenElement) {
-                document.documentElement.requestFullscreen().catch(() => {});
-              } else {
-                document.exitFullscreen().catch(() => {});
-              }
-            }}
-            className="px-4 py-2 rounded bg-black/70 text-white hover:bg-black/90"
-          >
-            {fullscreenParam ? "Exit ⛶" : "Fullscreen ⛶"}
-          </button>
-
-          <button
-            onClick={() => setShowSettings(true)}
-            className="px-4 py-2 rounded bg-black/70 text-white hover:bg-black/90"
-          >
-            ⚙ Settings
-          </button>
-        </div>
-      )}
+          ⚙ Settings
+        </button>
+      </DashboardControls>
 
       {/* Settings Modal */}
       {showSettings && (

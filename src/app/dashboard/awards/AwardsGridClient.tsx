@@ -2,6 +2,8 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
+import Link from "next/link";
+import DashboardControls from "@/src/components/DashboardControls";
 
 export interface Award {
   id: string;
@@ -58,7 +60,6 @@ function daysColor(value: string): string {
 export default function AwardsGridClient({ awards }: AwardsGridProps) {
   const now = new Date();
   const tableRef = useRef<HTMLDivElement>(null);
-  const hideTimer = useRef<NodeJS.Timeout | null>(null);
   const PAGE_OPTIONS = [5, 6, 8, 12];
   const ROTATION_OPTIONS = [
     { label: "Pause", value: 0 },
@@ -72,10 +73,6 @@ export default function AwardsGridClient({ awards }: AwardsGridProps) {
   );
   const [pageIndex, setPageIndex] = useState(0);
   const [rotationInterval, setRotationInterval] = useState(60_000);
-  const [showControls, setShowControls] = useState(false);
-  const [isFullscreen, setIsFullscreen] = useState(() =>
-    typeof document !== "undefined" && !!document.fullscreenElement,
-  );
   const rotationTimer = useRef<NodeJS.Timeout | null>(null);
   const touchStartX = useRef<number | null>(null);
 
@@ -109,13 +106,6 @@ export default function AwardsGridClient({ awards }: AwardsGridProps) {
     setPageIndex(0);
   };
 
-  // Track fullscreen state
-  useEffect(() => {
-    const handler = () => setIsFullscreen(!!document.fullscreenElement);
-    document.addEventListener("fullscreenchange", handler);
-    return () => document.removeEventListener("fullscreenchange", handler);
-  }, []);
-
   // Auto-rotate pages
   useEffect(() => {
     if (rotationTimer.current) clearInterval(rotationTimer.current);
@@ -127,27 +117,11 @@ export default function AwardsGridClient({ awards }: AwardsGridProps) {
     return () => { if (rotationTimer.current) clearInterval(rotationTimer.current); };
   }, [rotationInterval, totalPages]);
 
-  // Toggle fullscreen
-  const toggleFullscreen = () => {
-    if (!document.fullscreenElement) {
-      document.documentElement.requestFullscreen().catch(() => {});
-    } else {
-      document.exitFullscreen().catch(() => {});
-    }
-  };
-
   return (
     <div
       className={`flex flex-col justify-center h-screen pt-4 pb-8 px-0 md:px-4 overflow-hidden`}
       style={{ backgroundColor: "#0a1628" }}
       ref={tableRef}
-      onClick={(e) => {
-        if (e.clientY > window.innerHeight * 0.75) setShowControls(prev => !prev);
-      }}
-      onMouseMove={() => {
-        if (hideTimer.current) clearTimeout(hideTimer.current);
-        if (showControls) hideTimer.current = setTimeout(() => setShowControls(false), 5000);
-      }}
       onTouchStart={(e) => { touchStartX.current = e.touches[0].clientX; }}
       onTouchEnd={(e) => {
         if (touchStartX.current === null) return;
@@ -284,68 +258,22 @@ export default function AwardsGridClient({ awards }: AwardsGridProps) {
       </div>
 
 
-      {/* Hidden floating control bar – click bottom 25% to toggle */}
-      {showControls && (
-        <div
-          className="fixed bottom-20 left-1/2 -translate-x-1/2 z-50 bg-black/80 text-white rounded-xl shadow-lg flex flex-col md:flex-row items-center gap-3 px-4 py-3"
-          onClick={(e) => e.stopPropagation()}
-        >
-          <button
-            onClick={() => setPageIndex((i) => Math.max(0, i - 1))}
-            disabled={pageIndex === 0}
-            className="px-4 py-2 rounded bg-white/10 hover:bg-white/20 disabled:opacity-30 disabled:cursor-not-allowed"
-          >
-            ◀ Prev
-          </button>
-
-          <select
-            value={pageSize}
-            onChange={(e) => handlePageSizeChange(Number(e.target.value))}
-            className="px-4 py-2 bg-white/10 text-white rounded hover:bg-white/20 border-none text-sm cursor-pointer focus:outline-none [&>option]:bg-gray-800 [&>option]:text-white"
-          >
-            {PAGE_OPTIONS.map((n) => (
-              <option key={n} value={n}>{n} awards</option>
-            ))}
-            <option value={upcomingAwards.length}>All ({upcomingAwards.length})</option>
-          </select>
-
-          <span className="text-sm text-white/60">
-            {pageIndex + 1} / {totalPages}
-          </span>
-
-          <button
-            onClick={() => setPageIndex((i) => Math.min(totalPages - 1, i + 1))}
-            disabled={pageIndex >= totalPages - 1}
-            className="px-4 py-2 rounded bg-white/10 hover:bg-white/20 disabled:opacity-30 disabled:cursor-not-allowed"
-          >
-            Next ▶
-          </button>
-
-          <select
-            value={rotationInterval}
-            onChange={(e) => setRotationInterval(Number(e.target.value))}
-            className="px-4 py-2 bg-white/10 text-white rounded hover:bg-white/20 border-none text-sm cursor-pointer focus:outline-none [&>option]:bg-gray-800 [&>option]:text-white"
-          >
-            {ROTATION_OPTIONS.map((opt) => (
-              <option key={opt.value} value={opt.value}>{opt.label}</option>
-            ))}
-          </select>
-
-          <button
-            onClick={toggleFullscreen}
-            className="px-4 py-2 rounded bg-white/10 hover:bg-white/20 text-sm"
-          >
-            {isFullscreen ? "Exit ⛶" : "Fullscreen ⛶"}
-          </button>
-
-          <button
-            onClick={() => window.location.href = "/"}
-            className="px-4 py-2 rounded bg-white/10 hover:bg-white/20 text-sm"
-          >
-            Home
-          </button>
+      <DashboardControls>
+        <button onClick={() => setPageIndex((i) => Math.max(0, i - 1))} disabled={pageIndex === 0} className="px-4 py-2 rounded bg-black/40 text-white hover:bg-black/60 disabled:opacity-30 disabled:cursor-not-allowed">◀ Prev</button>
+        <select value={pageSize} onChange={(e) => handlePageSizeChange(Number(e.target.value))} className="px-4 py-2 rounded bg-black/40 text-white hover:bg-black/60 [&>option]:bg-gray-800 [&>option]:text-white">
+          {PAGE_OPTIONS.map((n) => (<option key={n} value={n}>{n} awards</option>))}
+          <option value={upcomingAwards.length}>All ({upcomingAwards.length})</option>
+        </select>
+        <span className="text-sm text-white/80">{pageIndex + 1} / {totalPages}</span>
+        <button onClick={() => setPageIndex((i) => Math.min(totalPages - 1, i + 1))} disabled={pageIndex >= totalPages - 1} className="px-4 py-2 rounded bg-black/40 text-white hover:bg-black/60 disabled:opacity-30 disabled:cursor-not-allowed">Next ▶</button>
+        <select value={rotationInterval} onChange={(e) => setRotationInterval(Number(e.target.value))} className="px-4 py-2 rounded bg-black/40 text-white hover:bg-black/60 [&>option]:bg-gray-800 [&>option]:text-white">
+          {ROTATION_OPTIONS.map((opt) => (<option key={opt.value} value={opt.value}>{opt.label}</option>))}
+        </select>
+        <div className="flex flex-col gap-1">
+          <Link href="/dashboard/awards/shorts" className="px-4 py-1 rounded bg-black/40 text-white hover:bg-black/60 text-center text-sm">Shorts</Link>
+          <Link href="/dashboard/awards/videos" className="px-4 py-1 rounded bg-black/40 text-white hover:bg-black/60 text-center text-sm">Videos</Link>
         </div>
-      )}
+      </DashboardControls>
     </div>
   );
 }

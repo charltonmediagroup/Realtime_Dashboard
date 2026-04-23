@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import DashboardControls from "@/src/components/DashboardControls";
 
 const REFRESH_MS = 30 * 60 * 1000;
 
@@ -40,11 +41,6 @@ export default function SponsorshipLeaderboard() {
   const [data, setData] = useState<Payload | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
-  const [showControls, setShowControls] = useState(false);
-  const [isFullscreen, setIsFullscreen] = useState(() =>
-    typeof document !== "undefined" && !!document.fullscreenElement,
-  );
-  const hideTimer = useRef<NodeJS.Timeout | null>(null);
   const cancelledRef = useRef(false);
 
   const load = useCallback(async () => {
@@ -70,20 +66,6 @@ export default function SponsorshipLeaderboard() {
     const id = setInterval(load, REFRESH_MS);
     return () => { cancelledRef.current = true; clearInterval(id); };
   }, [load]);
-
-  useEffect(() => {
-    const handler = () => setIsFullscreen(!!document.fullscreenElement);
-    document.addEventListener("fullscreenchange", handler);
-    return () => document.removeEventListener("fullscreenchange", handler);
-  }, []);
-
-  const toggleFullscreen = () => {
-    if (!document.fullscreenElement) {
-      document.documentElement.requestFullscreen().catch(() => {});
-    } else {
-      document.exitFullscreen().catch(() => {});
-    }
-  };
 
   const ranked = useMemo(() => {
     if (!data) return [];
@@ -132,13 +114,6 @@ export default function SponsorshipLeaderboard() {
     <div
       className="flex flex-col justify-center h-screen px-0 md:px-4 overflow-hidden"
       style={{ backgroundColor: "#2a2a2a" }}
-      onClick={(e) => {
-        if (e.clientY > window.innerHeight * 0.75) setShowControls((prev) => !prev);
-      }}
-      onMouseMove={() => {
-        if (hideTimer.current) clearTimeout(hideTimer.current);
-        if (showControls) hideTimer.current = setTimeout(() => setShowControls(false), 5000);
-      }}
     >
       {/* ---- DESKTOP TABLE ---- */}
       <div className="hidden md:flex landscape-show flex-col flex-1 min-h-0">
@@ -278,42 +253,11 @@ export default function SponsorshipLeaderboard() {
         </table>
       </div>
 
-      {/* Hidden floating control bar */}
-      {showControls && (
-        <div
-          className="fixed bottom-20 left-1/2 -translate-x-1/2 z-50 bg-black/80 text-white rounded-xl shadow-lg flex flex-col md:flex-row items-center gap-3 px-4 py-3"
-          onClick={(e) => e.stopPropagation()}
-        >
-          <button
-            onClick={() => load()}
-            disabled={refreshing}
-            className="px-4 py-2 rounded bg-white/10 hover:bg-white/20 disabled:opacity-40 disabled:cursor-not-allowed text-sm"
-          >
-            {refreshing ? "Refreshing..." : "↻ Refresh"}
-          </button>
-          <span className="text-xs text-white/50">
-            {data ? `Updated ${new Date(data.lastUpdated).toLocaleTimeString()}` : ""}
-          </span>
-          <button
-            onClick={toggleFullscreen}
-            className="px-4 py-2 rounded bg-white/10 hover:bg-white/20 text-sm"
-          >
-            {isFullscreen ? "Exit ⛶" : "Fullscreen ⛶"}
-          </button>
-          <button
-            onClick={() => (window.location.href = "/dashboard/bizzcon")}
-            className="px-4 py-2 rounded bg-white/10 hover:bg-white/20 text-sm"
-          >
-            Events
-          </button>
-          <button
-            onClick={() => (window.location.href = "/")}
-            className="px-4 py-2 rounded bg-white/10 hover:bg-white/20 text-sm"
-          >
-            Home
-          </button>
-        </div>
-      )}
+      <DashboardControls>
+        <button onClick={() => load()} disabled={refreshing} className="px-4 py-2 rounded bg-black/40 text-white hover:bg-black/60 disabled:opacity-40 disabled:cursor-not-allowed">{refreshing ? "Refreshing..." : "↻ Refresh"}</button>
+        <span className="text-xs text-white/70">{data ? `Updated ${new Date(data.lastUpdated).toLocaleTimeString()}` : ""}</span>
+        <button onClick={() => (window.location.href = "/dashboard/bizzcon")} className="px-4 py-2 rounded bg-black/40 text-white hover:bg-black/60">Events</button>
+      </DashboardControls>
     </div>
   );
 }

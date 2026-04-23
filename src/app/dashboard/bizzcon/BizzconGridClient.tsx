@@ -2,6 +2,8 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
+import Link from "next/link";
+import DashboardControls from "@/src/components/DashboardControls";
 
 export interface BizzconEvent {
   id: string;
@@ -49,7 +51,6 @@ function daysColor(value: string): string {
 export default function BizzconGridClient({ events }: BizzconGridProps) {
   const now = new Date();
   const tableRef = useRef<HTMLDivElement>(null);
-  const hideTimer = useRef<NodeJS.Timeout | null>(null);
   const PAGE_OPTIONS = [5, 6, 8, 12];
   const ROTATION_OPTIONS = [
     { label: "Pause", value: 0 },
@@ -61,8 +62,6 @@ export default function BizzconGridClient({ events }: BizzconGridProps) {
   const [pageSize, setPageSize] = useState(5);
   const [pageIndex, setPageIndex] = useState(0);
   const [rotationInterval, setRotationInterval] = useState(60_000);
-  const [showControls, setShowControls] = useState(false);
-  const [isFullscreen, setIsFullscreen] = useState(false);
   const rotationTimer = useRef<NodeJS.Timeout | null>(null);
   const touchStart = useRef<{ x: number; y: number } | null>(null);
 
@@ -70,7 +69,6 @@ export default function BizzconGridClient({ events }: BizzconGridProps) {
     if (window.innerWidth < 768 && window.innerHeight > window.innerWidth) {
       setPageSize(6);
     }
-    setIsFullscreen(!!document.fullscreenElement);
   }, []);
 
   const upcomingEvents = useMemo(() => {
@@ -116,12 +114,6 @@ export default function BizzconGridClient({ events }: BizzconGridProps) {
   };
 
   useEffect(() => {
-    const handler = () => setIsFullscreen(!!document.fullscreenElement);
-    document.addEventListener("fullscreenchange", handler);
-    return () => document.removeEventListener("fullscreenchange", handler);
-  }, []);
-
-  useEffect(() => {
     if (rotationTimer.current) clearInterval(rotationTimer.current);
     if (rotationInterval <= 0 || totalPages <= 1) return;
     rotationTimer.current = setInterval(
@@ -131,26 +123,11 @@ export default function BizzconGridClient({ events }: BizzconGridProps) {
     return () => { if (rotationTimer.current) clearInterval(rotationTimer.current); };
   }, [rotationInterval, totalPages]);
 
-  const toggleFullscreen = () => {
-    if (!document.fullscreenElement) {
-      document.documentElement.requestFullscreen().catch(() => {});
-    } else {
-      document.exitFullscreen().catch(() => {});
-    }
-  };
-
   return (
     <div
       className={`flex flex-col justify-center h-screen pt-4 pb-8 px-0 md:px-4 overflow-hidden`}
       style={{ backgroundColor: "#181818" }}
       ref={tableRef}
-      onClick={(e) => {
-        if (e.clientY > window.innerHeight * 0.75) setShowControls(prev => !prev);
-      }}
-      onMouseMove={() => {
-        if (hideTimer.current) clearTimeout(hideTimer.current);
-        if (showControls) hideTimer.current = setTimeout(() => setShowControls(false), 5000);
-      }}
       onTouchStart={(e) => {
         touchStart.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
       }}
@@ -273,26 +250,22 @@ export default function BizzconGridClient({ events }: BizzconGridProps) {
         </table>
       </div>
 
-      {/* Hidden floating control bar */}
-      {showControls && (
-        <div
-          className="fixed bottom-20 left-1/2 -translate-x-1/2 z-50 bg-black/80 text-white rounded-xl shadow-lg flex flex-col md:flex-row items-center gap-3 px-4 py-3"
-          onClick={(e) => e.stopPropagation()}
-        >
-          <button onClick={() => setPageIndex((i) => Math.max(0, i - 1))} disabled={pageIndex === 0} className="px-4 py-2 rounded bg-white/10 hover:bg-white/20 disabled:opacity-30 disabled:cursor-not-allowed">◀ Prev</button>
-          <select value={pageSize} onChange={(e) => handlePageSizeChange(Number(e.target.value))} className="px-4 py-2 bg-white/10 text-white rounded hover:bg-white/20 border-none text-sm cursor-pointer focus:outline-none [&>option]:bg-gray-800 [&>option]:text-white">
-            {PAGE_OPTIONS.map((n) => (<option key={n} value={n}>{n} events</option>))}
-            <option value={upcomingEvents.length}>All ({upcomingEvents.length})</option>
-          </select>
-          <span className="text-sm text-white/60">{pageIndex + 1} / {totalPages}</span>
-          <button onClick={() => setPageIndex((i) => Math.min(totalPages - 1, i + 1))} disabled={pageIndex >= totalPages - 1} className="px-4 py-2 rounded bg-white/10 hover:bg-white/20 disabled:opacity-30 disabled:cursor-not-allowed">Next ▶</button>
-          <select value={rotationInterval} onChange={(e) => setRotationInterval(Number(e.target.value))} className="px-4 py-2 bg-white/10 text-white rounded hover:bg-white/20 border-none text-sm cursor-pointer focus:outline-none [&>option]:bg-gray-800 [&>option]:text-white">
-            {ROTATION_OPTIONS.map((opt) => (<option key={opt.value} value={opt.value}>{opt.label}</option>))}
-          </select>
-          <button onClick={toggleFullscreen} className="px-4 py-2 rounded bg-white/10 hover:bg-white/20 text-sm">{isFullscreen ? "Exit ⛶" : "Fullscreen ⛶"}</button>
-          <button onClick={() => window.location.href = "/"} className="px-4 py-2 rounded bg-white/10 hover:bg-white/20 text-sm">Home</button>
+      <DashboardControls>
+        <button onClick={() => setPageIndex((i) => Math.max(0, i - 1))} disabled={pageIndex === 0} className="px-4 py-2 rounded bg-black/40 text-white hover:bg-black/60 disabled:opacity-30 disabled:cursor-not-allowed">◀ Prev</button>
+        <select value={pageSize} onChange={(e) => handlePageSizeChange(Number(e.target.value))} className="px-4 py-2 rounded bg-black/40 text-white hover:bg-black/60 [&>option]:bg-gray-800 [&>option]:text-white">
+          {PAGE_OPTIONS.map((n) => (<option key={n} value={n}>{n} events</option>))}
+          <option value={upcomingEvents.length}>All ({upcomingEvents.length})</option>
+        </select>
+        <span className="text-sm text-white/80">{pageIndex + 1} / {totalPages}</span>
+        <button onClick={() => setPageIndex((i) => Math.min(totalPages - 1, i + 1))} disabled={pageIndex >= totalPages - 1} className="px-4 py-2 rounded bg-black/40 text-white hover:bg-black/60 disabled:opacity-30 disabled:cursor-not-allowed">Next ▶</button>
+        <select value={rotationInterval} onChange={(e) => setRotationInterval(Number(e.target.value))} className="px-4 py-2 rounded bg-black/40 text-white hover:bg-black/60 [&>option]:bg-gray-800 [&>option]:text-white">
+          {ROTATION_OPTIONS.map((opt) => (<option key={opt.value} value={opt.value}>{opt.label}</option>))}
+        </select>
+        <div className="flex flex-col gap-1">
+          <Link href="/dashboard/bizzcon/shorts" className="px-4 py-1 rounded bg-black/40 text-white hover:bg-black/60 text-center text-sm">Shorts</Link>
+          <Link href="/dashboard/bizzcon/videos" className="px-4 py-1 rounded bg-black/40 text-white hover:bg-black/60 text-center text-sm">Videos</Link>
         </div>
-      )}
+      </DashboardControls>
     </div>
   );
 }

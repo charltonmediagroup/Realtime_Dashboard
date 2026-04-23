@@ -1,8 +1,10 @@
 "use client";
 
+import Link from "next/link";
 import ShortsPlayer from "@/src/components/ShortsPlayer";
 import EditorialVideosTicker from "@/src/components/EditorialVideosTicker";
-import VideoPageControls from "@/src/components/VideoPageControls";
+import DashboardControls from "@/src/components/DashboardControls";
+import WaitModeToggle from "@/src/components/WaitModeToggle";
 
 export default function BizzconShortsPage() {
   return (
@@ -14,7 +16,10 @@ export default function BizzconShortsPage() {
         />
       </div>
       <EditorialVideosTicker />
-      <VideoPageControls />
+      <DashboardControls>
+        <WaitModeToggle />
+        <Link href="/dashboard/bizzcon" className="px-4 py-2 rounded bg-black/40 text-white hover:bg-black/60">← Back</Link>
+      </DashboardControls>
     </div>
   );
 }

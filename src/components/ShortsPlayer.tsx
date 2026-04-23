@@ -184,7 +184,7 @@ export default function ShortsPlayer({
                 allowFullScreen
               />
             </div>
-            <p className="text-sm font-semibold mt-2 text-center uppercase line-clamp-1 text-gray-900">
+            <p className="text-xl font-semibold mt-2 text-center uppercase line-clamp-1 text-gray-900">
               {video.title}
             </p>
           </div>
