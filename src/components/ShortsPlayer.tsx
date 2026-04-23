@@ -9,9 +9,9 @@ interface ShortsPlayerProps {
   fetchUrl?: string;
   className?: string;
   rotationInterval?: number;
+  slots?: number;
 }
 
-const SLOTS = 2;
 const WAIT_MODE_KEY = "shortsWaitMode";
 const WAIT_MODE_EVENT = "shortsModeChange";
 
@@ -21,6 +21,7 @@ export default function ShortsPlayer({
   fetchUrl,
   className = "",
   rotationInterval = 30_000,
+  slots: SLOTS = 2,
 }: ShortsPlayerProps) {
   const [videos, setVideos] = useState<Video[]>(initialVideos || []);
   const [loading, setLoading] = useState(!initialVideos);

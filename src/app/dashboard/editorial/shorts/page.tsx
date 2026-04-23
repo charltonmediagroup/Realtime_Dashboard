@@ -13,6 +13,7 @@ export default function EditorialShortsPage() {
         <ShortsPlayer
           className="h-full"
           fetchUrl="/api/videos/classified?department=editorial&format=shorts"
+          slots={1}
         />
       </div>
       <EditorialVideosTicker />
