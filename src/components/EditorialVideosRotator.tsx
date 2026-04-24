@@ -43,11 +43,16 @@ interface EditorialVideosRotatorProps {
   displayTime?: number;
   startIndex?: number;
   onError?: () => void;
-  // When true, enables TV-safe behaviour: full-cycle page reload, continuous
-  // stall detection piggy-backed on the caption poll, and a 30-minute
-  // hard-floor safety reload. Off by default so PC viewers and other
-  // consumers (bizzcon, awards) aren't interrupted.
+  // When true, enables TV-safe behaviour: end-of-cycle soft reload,
+  // continuous stall detection piggy-backed on the caption poll, and a
+  // 25-minute hard-floor safety reload. Off by default so PC viewers and
+  // other consumers (bizzcon, awards) aren't interrupted.
   tvMode?: boolean;
+  // Called at the end of every full cycle in TV mode. The parent is
+  // expected to remount this component (e.g. by changing its key), which
+  // tears down iframes/decoders without navigating away — so fullscreen
+  // state is preserved. If omitted, falls back to window.location.reload().
+  onCycleReload?: () => void;
 }
 
 export default function EditorialVideosRotator({
@@ -57,6 +62,7 @@ export default function EditorialVideosRotator({
   startIndex = 0,
   onError,
   tvMode = false,
+  onCycleReload,
 }: EditorialVideosRotatorProps) {
   const containerA = useRef<HTMLDivElement>(null);
   const containerB = useRef<HTMLDivElement>(null);
@@ -85,6 +91,12 @@ export default function EditorialVideosRotator({
   // having to be torn down and restarted.
   const tvModeRef = useRef(tvMode);
   tvModeRef.current = tvMode;
+
+  // Same pattern for the cycle-reload callback — nextVideo is captured by
+  // the rotation interval the first time the useEffect runs, so without
+  // a ref it would call a stale onCycleReload if the prop changed.
+  const onCycleReloadRef = useRef(onCycleReload);
+  onCycleReloadRef.current = onCycleReload;
 
   // End-of-cycle reload counter. Increments on every rotation — natural or
   // forced by the stall detector. Force-skips still count because the
@@ -155,15 +167,17 @@ export default function EditorialVideosRotator({
   }, [urlKey, displayTime]);
 
   /* ---------- TV MODE SAFETY RELOAD ---------- */
-  // Belt-and-suspenders for the end-of-cycle reload. If the cycle counter,
-  // caption poll, and stall detector all fail (e.g., the whole JS context
-  // is frozen), this hard-floor timeout still refreshes the page once every
-  // 30 minutes so a TV can never be stuck on a dead state forever.
+  // Belt-and-suspenders for the end-of-cycle soft reload. Intentionally a
+  // HARD reload (window.location.reload) so it also flushes any memory the
+  // soft remount couldn't release — decoder slots stuck in the TV browser,
+  // Vimeo SDK internals, parent-page heap. Fullscreen briefly exits when
+  // this fires, but it only fires if the cycle counter, caption poll, and
+  // stall detector all failed to complete a cycle within 25 minutes.
   useEffect(() => {
     if (!tvMode) return;
     const timer = window.setTimeout(
       () => window.location.reload(),
-      30 * 60 * 1000,
+      25 * 60 * 1000,
     );
     return () => clearTimeout(timer);
   }, [tvMode]);
@@ -430,10 +444,16 @@ export default function EditorialVideosRotator({
     // the stall detector (which still advances through the playlist).
     if (rotationsInCycle.current >= videos.current.length) {
       if (tvModeRef.current) {
-        // Reload to reset memory, decoder, and iframe state before the
-        // TV browser starts dropping frames on long sessions.
+        // Soft reload: let the parent remount this component so iframes
+        // and decoders get torn down without navigating away — that way
+        // fullscreen survives. Fall back to a hard reload if no callback
+        // was provided so the memory-leak fix still works standalone.
         cleanup();
-        window.location.reload();
+        if (onCycleReloadRef.current) {
+          onCycleReloadRef.current();
+        } else {
+          window.location.reload();
+        }
         return;
       }
       // Non-TV: just keep rotating; reset so the counter doesn't grow

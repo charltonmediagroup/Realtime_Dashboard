@@ -28,6 +28,11 @@ const TV_MODE_STORAGE_KEY = "dashboard.editorial.videos.tvMode";
 export default function EditorialVideosPage() {
   const [brands, setBrands] = useState<BrandEntry[]>([]);
   const [tvMode, setTvMode] = useState(false);
+  // Incremented whenever the rotator signals end-of-cycle in TV mode.
+  // Used as the rotator's React key so bumping it unmounts + remounts
+  // the component — effectively a reload without navigating the page,
+  // which preserves fullscreen on TV browsers.
+  const [rotatorEpoch, setRotatorEpoch] = useState(0);
 
   // Hydrate TV mode from localStorage so the setting survives the
   // end-of-cycle auto-reload that TV mode itself triggers.
@@ -83,7 +88,12 @@ export default function EditorialVideosPage() {
     <div className="h-screen bg-white flex flex-col overflow-hidden">
       <div className="flex-1 min-h-0 relative overflow-hidden bg-white">
         <div className="fg-video absolute inset-0">
-          <EditorialVideosRotator xmlUrl={feedUrls} tvMode={tvMode} />
+          <EditorialVideosRotator
+            key={rotatorEpoch}
+            xmlUrl={feedUrls}
+            tvMode={tvMode}
+            onCycleReload={() => setRotatorEpoch(n => n + 1)}
+          />
         </div>
       </div>
       <EditorialVideosTicker />
