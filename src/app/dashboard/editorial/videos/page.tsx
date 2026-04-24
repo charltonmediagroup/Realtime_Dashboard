@@ -33,6 +33,19 @@ export default function EditorialVideosPage() {
   // the component — effectively a reload without navigating the page,
   // which preserves fullscreen on TV browsers.
   const [rotatorEpoch, setRotatorEpoch] = useState(0);
+  // Briefly false during the soft-reload blackout. Unmounting the rotator
+  // for ~2s gives the TV browser time to release decoder slots held by the
+  // old iframes before new ones try to allocate — without the gap, the
+  // first videos after a cycle buffer endlessly or flash white.
+  const [rotatorMounted, setRotatorMounted] = useState(true);
+
+  const handleCycleReload = () => {
+    setRotatorMounted(false);
+    window.setTimeout(() => {
+      setRotatorEpoch(n => n + 1);
+      setRotatorMounted(true);
+    }, 2000);
+  };
 
   // Hydrate TV mode from localStorage so the setting survives the
   // end-of-cycle auto-reload that TV mode itself triggers.
@@ -88,12 +101,16 @@ export default function EditorialVideosPage() {
     <div className="h-screen bg-white flex flex-col overflow-hidden">
       <div className="flex-1 min-h-0 relative overflow-hidden bg-white">
         <div className="fg-video absolute inset-0">
-          <EditorialVideosRotator
-            key={rotatorEpoch}
-            xmlUrl={feedUrls}
-            tvMode={tvMode}
-            onCycleReload={() => setRotatorEpoch(n => n + 1)}
-          />
+          {rotatorMounted ? (
+            <EditorialVideosRotator
+              key={rotatorEpoch}
+              xmlUrl={feedUrls}
+              tvMode={tvMode}
+              onCycleReload={handleCycleReload}
+            />
+          ) : (
+            <div className="w-full h-full bg-black" />
+          )}
         </div>
       </div>
       <EditorialVideosTicker />
