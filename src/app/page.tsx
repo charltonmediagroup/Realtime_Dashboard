@@ -36,11 +36,14 @@ export default function Home() {
           <Link href="/dashboard/awards" className="hover:underline mt-8">
             Awards
           </Link>
-          <Link href="/dashboard/Awards/qsr-uk" className="hover:underline ml-8">
+          <Link href="/dashboard/awards/qsr-uk" className="hover:underline ml-8">
             QSR UK
           </Link>
-          <Link href="/dashboard/Awards/qsr-aus" className="hover:underline ml-8">
+          <Link href="/dashboard/awards/qsr-aus" className="hover:underline ml-8">
             QSR AUS
+          </Link>
+          <Link href="/dashboard/awards/leaderboard" className="hover:underline ml-8">
+            Leaderboard
           </Link>
 
           <Link href="/dashboard/bizzcon" className="hover:underline mt-8">
