@@ -43,6 +43,11 @@ interface EditorialVideosRotatorProps {
   displayTime?: number;
   startIndex?: number;
   onError?: () => void;
+  // When true, enables TV-safe behaviour: full-cycle page reload, continuous
+  // stall detection piggy-backed on the caption poll, and a 30-minute
+  // hard-floor safety reload. Off by default so PC viewers and other
+  // consumers (bizzcon, awards) aren't interrupted.
+  tvMode?: boolean;
 }
 
 export default function EditorialVideosRotator({
@@ -51,6 +56,7 @@ export default function EditorialVideosRotator({
   displayTime = 30,
   startIndex = 0,
   onError,
+  tvMode = false,
 }: EditorialVideosRotatorProps) {
   const containerA = useRef<HTMLDivElement>(null);
   const containerB = useRef<HTMLDivElement>(null);
@@ -70,8 +76,22 @@ export default function EditorialVideosRotator({
   const cuesB = useRef<Cue[]>([]);
   // Single polling timer that reads the currently-active player's currentTime
   // and pushes matching cue text into captionBox. Only one is alive at a time.
+  // In TV mode this same poll also drives stall detection.
   const captionTimer = useRef<number | null>(null);
   const captionPlayer = useRef<Player | null>(null);
+
+  // TV mode state in a ref so long-lived closures (setInterval callbacks,
+  // player event handlers) always see the latest toggle value without
+  // having to be torn down and restarted.
+  const tvModeRef = useRef(tvMode);
+  tvModeRef.current = tvMode;
+
+  // End-of-cycle reload counter. Increments on every rotation — natural or
+  // forced by the stall detector. Force-skips still count because the
+  // rotator advances through the playlist in order regardless of how long
+  // each video actually played, so counter === videos.length means we
+  // loaded every video once.
+  const rotationsInCycle = useRef(0);
 
   const urlList = Array.isArray(xmlUrl) ? xmlUrl : xmlUrl ? [xmlUrl] : [];
   const urlKey = urlList.join("|");
@@ -134,6 +154,20 @@ export default function EditorialVideosRotator({
     return cleanup;
   }, [urlKey, displayTime]);
 
+  /* ---------- TV MODE SAFETY RELOAD ---------- */
+  // Belt-and-suspenders for the end-of-cycle reload. If the cycle counter,
+  // caption poll, and stall detector all fail (e.g., the whole JS context
+  // is frozen), this hard-floor timeout still refreshes the page once every
+  // 30 minutes so a TV can never be stuck on a dead state forever.
+  useEffect(() => {
+    if (!tvMode) return;
+    const timer = window.setTimeout(
+      () => window.location.reload(),
+      30 * 60 * 1000,
+    );
+    return () => clearTimeout(timer);
+  }, [tvMode]);
+
   /* ---------- CAPTION SYNC ---------- */
   // Polls the active player's currentTime and renders the matching cue into
   // captionBox. Kept deliberately tied to a single player reference so a
@@ -154,14 +188,48 @@ export default function EditorialVideosRotator({
   ) => {
     stopCaptionSync();
     captionPlayer.current = player;
+
+    // Stall-detection state is closure-local so each new player starts
+    // fresh. We piggyback on the caption poll — there's no second timer.
+    let lastPolledTime = -1;
+    let stalledTicks = 0;
+
     captionTimer.current = window.setInterval(async () => {
       if (captionPlayer.current !== player) return;
       try {
         const now = await player.getCurrentTime();
         if (captionPlayer.current !== player) return;
+
         const active = cuesRef.current.find(c => now >= c.start && now <= c.end);
         if (captionBox.current) {
           captionBox.current.textContent = active?.text ?? "";
+        }
+
+        // Stall detector (TV mode only). If currentTime hasn't advanced
+        // across ~2 s of polling, the video is frozen — force a skip.
+        // A loop:true wrap (duration → 0) isn't a stall because the
+        // diff jumps, not stays near zero.
+        if (tvModeRef.current) {
+          if (lastPolledTime >= 0 && Math.abs(now - lastPolledTime) < 0.05) {
+            stalledTicks++;
+            if (stalledTicks >= 8) {
+              stalledTicks = 0;
+              lastPolledTime = -1;
+              // Reset the rotation clock so the replacement video gets
+              // a full displayTime, not the leftover slice of this one.
+              if (intervalRef.current) {
+                clearInterval(intervalRef.current);
+                intervalRef.current = window.setInterval(
+                  nextVideo,
+                  displayTime * 1000,
+                );
+              }
+              nextVideo();
+            }
+          } else {
+            stalledTicks = 0;
+            lastPolledTime = now;
+          }
         }
       } catch {}
     }, 250);
@@ -355,6 +423,24 @@ export default function EditorialVideosRotator({
 
   /* ---------- ROTATION ---------- */
   const nextVideo = () => {
+    rotationsInCycle.current++;
+
+    // End-of-cycle behaviour. At this point every video has been loaded
+    // once — either played for its full displayTime or force-skipped by
+    // the stall detector (which still advances through the playlist).
+    if (rotationsInCycle.current >= videos.current.length) {
+      if (tvModeRef.current) {
+        // Reload to reset memory, decoder, and iframe state before the
+        // TV browser starts dropping frames on long sessions.
+        cleanup();
+        window.location.reload();
+        return;
+      }
+      // Non-TV: just keep rotating; reset so the counter doesn't grow
+      // unbounded across long-running sessions.
+      rotationsInCycle.current = 0;
+    }
+
     currentIndex.current = (currentIndex.current + 1) % videos.current.length;
 
     const current = videos.current[currentIndex.current];
@@ -363,8 +449,11 @@ export default function EditorialVideosRotator({
     if (titleBox.current) {
       titleBox.current.style.opacity = "0";
       setTimeout(() => {
-        titleBox.current!.textContent = current.title;
-        titleBox.current!.style.opacity = "1";
+        // Ref may have been nulled during the 200ms window — e.g., the
+        // TV-mode end-of-cycle reload unmounts the component mid-timeout.
+        if (!titleBox.current) return;
+        titleBox.current.textContent = current.title;
+        titleBox.current.style.opacity = "1";
       }, 200);
     }
 

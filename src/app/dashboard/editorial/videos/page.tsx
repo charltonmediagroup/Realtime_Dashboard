@@ -23,8 +23,27 @@ function getVideoFeed(siteConfig: SiteConfig) {
   return url ? `${url}/latest-videos.xml` : "";
 }
 
+const TV_MODE_STORAGE_KEY = "dashboard.editorial.videos.tvMode";
+
 export default function EditorialVideosPage() {
   const [brands, setBrands] = useState<BrandEntry[]>([]);
+  const [tvMode, setTvMode] = useState(false);
+
+  // Hydrate TV mode from localStorage so the setting survives the
+  // end-of-cycle auto-reload that TV mode itself triggers.
+  useEffect(() => {
+    try {
+      if (localStorage.getItem(TV_MODE_STORAGE_KEY) === "1") setTvMode(true);
+    } catch {}
+  }, []);
+
+  const toggleTvMode = () => {
+    setTvMode(prev => {
+      const next = !prev;
+      try { localStorage.setItem(TV_MODE_STORAGE_KEY, next ? "1" : "0"); } catch {}
+      return next;
+    });
+  };
 
   useEffect(() => {
     const fetchBrands = async () => {
@@ -64,12 +83,19 @@ export default function EditorialVideosPage() {
     <div className="h-screen bg-white flex flex-col overflow-hidden">
       <div className="flex-1 min-h-0 relative overflow-hidden bg-white">
         <div className="fg-video absolute inset-0">
-          <EditorialVideosRotator xmlUrl={feedUrls} />
+          <EditorialVideosRotator xmlUrl={feedUrls} tvMode={tvMode} />
         </div>
       </div>
       <EditorialVideosTicker />
       <DashboardControls>
         <Link href="/dashboard/editorial" className="px-4 py-2 rounded bg-black/40 text-white hover:bg-black/60">← Back</Link>
+        <button
+          onClick={toggleTvMode}
+          className={`px-4 py-2 rounded text-white ${tvMode ? "bg-red-600/80 hover:bg-red-600" : "bg-black/40 hover:bg-black/60"}`}
+          title="Enables end-of-cycle auto-reload and mid-playback stall detection for TV browsers"
+        >
+          TV Mode: {tvMode ? "ON" : "OFF"}
+        </button>
       </DashboardControls>
       <style>{`
         .fg-video .video-title { display: none !important; }

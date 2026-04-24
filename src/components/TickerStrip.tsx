@@ -136,7 +136,7 @@ export default function TickerStrip({
           }
         `}
       </style>
-      <div style={{ ...styles.label, backgroundColor: labelColor, ...(fontSize ? { fontSize, width: "clamp(180px, 14vw, 280px)" } : null) }}>{label}</div>
+      <div style={{ ...styles.label, backgroundColor: labelColor, ...(fontSize ? { fontSize, width: "clamp(240px, 18vw, 370px)" } : null) }}>{label}</div>
       <div ref={containerRef} style={styles.scroll}>
         <span ref={headlinesRef} style={{ ...styles.headlines, ...(fontSize ? { fontSize } : null) }}>
           {headlines.map((h, i) => (

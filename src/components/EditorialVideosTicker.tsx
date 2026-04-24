@@ -63,8 +63,8 @@ export default function EditorialVideosTicker() {
             <TickerCard
               feedUrl={exclusiveFeeds}
               duration={4000}
-              fontSize="clamp(20px, 2vw, 38px)"
-              height="clamp(65px, 6vh, 80px)"
+              fontSize="clamp(28px, 2.8vw, 52px)"
+              height="clamp(85px, 7.5vh, 104px)"
             />
           </div>
         )}
@@ -73,8 +73,8 @@ export default function EditorialVideosTicker() {
             <TickerStrip
               feedUrl={newsFeeds}
               speed={60}
-              fontSize="clamp(20px, 2vw, 38px)"
-              height="clamp(65px, 6vh, 80px)"
+              fontSize="clamp(28px, 2.8vw, 52px)"
+              height="clamp(85px, 7.5vh, 104px)"
             />
           </div>
         )}

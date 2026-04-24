@@ -124,7 +124,7 @@ export default function TickerCard({
 
     return (
         <div style={{ ...styles.ticker, ...(height ? { height } : null) }}>
-            <div style={{ ...styles.label, backgroundColor: labelColor, ...(fontSize ? { fontSize, width: "clamp(180px, 14vw, 280px)" } : null) }}>{label}</div>
+            <div style={{ ...styles.label, backgroundColor: labelColor, ...(fontSize ? { fontSize, width: "clamp(240px, 18vw, 370px)" } : null) }}>{label}</div>
             <div style={{ ...styles.scroll, ...(height ? { minHeight: height } : null) }} ref={scrollRef}>
                 {headlines.map((h, i) => (
                     <div
