@@ -5,6 +5,38 @@ import Player from "@vimeo/player";
 
 const EXCLUDED_TITLES_FILTER = /Awards|Event Highlights/i;
 
+interface Cue { start: number; end: number; text: string; }
+
+// WebVTT times can be HH:MM:SS.mmm or MM:SS.mmm. Pop from the end so the
+// presence or absence of hours doesn't matter.
+const parseVttTime = (t: string): number => {
+  const parts = t.split(/[:.,]/).map(Number);
+  const ms = parts.pop() ?? 0;
+  const s = parts.pop() ?? 0;
+  const m = parts.pop() ?? 0;
+  const h = parts.pop() ?? 0;
+  return h * 3600 + m * 60 + s + ms / 1000;
+};
+
+const parseVtt = (vtt: string): Cue[] => {
+  const cues: Cue[] = [];
+  const lines = vtt.split(/\r?\n/);
+  for (let i = 0; i < lines.length; i++) {
+    const m = lines[i].match(/(\S+)\s+-->\s+(\S+)/);
+    if (!m) continue;
+    const start = parseVttTime(m[1]);
+    const end = parseVttTime(m[2]);
+    const text: string[] = [];
+    i++;
+    while (i < lines.length && lines[i].trim() !== "") {
+      text.push(lines[i].trim().replace(/<[^>]+>/g, ""));
+      i++;
+    }
+    if (text.length) cues.push({ start, end, text: text.join("\n") });
+  }
+  return cues;
+};
+
 interface EditorialVideosRotatorProps {
   xmlUrl?: string | string[];
   videos?: { title: string; link: string }[];
@@ -31,6 +63,15 @@ export default function EditorialVideosRotator({
   const currentIndex = useRef(startIndex);
   const showingA = useRef(true);
   const intervalRef = useRef<number | null>(null);
+
+  // Cached parsed cues per slot so preloads can have their VTT ready before
+  // activation. Populated async by loadInto; read by the caption sync timer.
+  const cuesA = useRef<Cue[]>([]);
+  const cuesB = useRef<Cue[]>([]);
+  // Single polling timer that reads the currently-active player's currentTime
+  // and pushes matching cue text into captionBox. Only one is alive at a time.
+  const captionTimer = useRef<number | null>(null);
+  const captionPlayer = useRef<Player | null>(null);
 
   const urlList = Array.isArray(xmlUrl) ? xmlUrl : xmlUrl ? [xmlUrl] : [];
   const urlKey = urlList.join("|");
@@ -93,12 +134,46 @@ export default function EditorialVideosRotator({
     return cleanup;
   }, [urlKey, displayTime]);
 
+  /* ---------- CAPTION SYNC ---------- */
+  // Polls the active player's currentTime and renders the matching cue into
+  // captionBox. Kept deliberately tied to a single player reference so a
+  // stale timer (player destroyed mid-poll) bails without touching the new
+  // player's captions.
+  const stopCaptionSync = () => {
+    if (captionTimer.current) {
+      clearInterval(captionTimer.current);
+      captionTimer.current = null;
+    }
+    captionPlayer.current = null;
+    if (captionBox.current) captionBox.current.textContent = "";
+  };
+
+  const startCaptionSync = (
+    player: Player,
+    cuesRef: React.RefObject<Cue[]>,
+  ) => {
+    stopCaptionSync();
+    captionPlayer.current = player;
+    captionTimer.current = window.setInterval(async () => {
+      if (captionPlayer.current !== player) return;
+      try {
+        const now = await player.getCurrentTime();
+        if (captionPlayer.current !== player) return;
+        const active = cuesRef.current.find(c => now >= c.start && now <= c.end);
+        if (captionBox.current) {
+          captionBox.current.textContent = active?.text ?? "";
+        }
+      } catch {}
+    }, 250);
+  };
+
   /* ---------- CLEANUP ---------- */
   const cleanup = () => {
     if (intervalRef.current) {
       clearInterval(intervalRef.current);
       intervalRef.current = null;
     }
+    stopCaptionSync();
     destroyPlayer(playerA);
     destroyPlayer(playerB);
   };
@@ -137,6 +212,11 @@ export default function EditorialVideosRotator({
 
     playerRef.current = player;
 
+    // Reset cues for this slot so a stale VTT from the previous video never
+    // leaks into the new one if the fetch below fails or is slow.
+    const cuesTargetRef = playerRef === playerA ? cuesA : cuesB;
+    cuesTargetRef.current = [];
+
     // Each async Vimeo call can land after the player is destroyed (next
     // rotation, unmount, or a failed load), which the SDK logs as
     // "Unknown player. Probably unloaded." Bail out as soon as the ref
@@ -154,16 +234,28 @@ export default function EditorialVideosRotator({
           tracks.find(t => t.kind === "captions") ??
           tracks.find(t => t.kind === "subtitles") ??
           tracks[0];
-        if (track) await player.enableTextTrack(track.language, track.kind);
-      } catch {}
+        if (!track) return;
 
-      if (!alive()) return;
-      try {
-        player.on("cuechange", (data: { cues: Array<{ text: string }> }) => {
-          if (captionBox.current) {
-            captionBox.current.textContent = data.cues.map(c => c.text).join("\n");
+        // Fetch captions via our server-side proxy. The browser can't hit
+        // Vimeo's /config endpoint directly (CORS + 403), so the API route
+        // does it server-side and streams the raw .vtt body back to us.
+        // This keeps Vimeo's in-iframe caption rendering off — we drive our
+        // own overlay via the polling timer — so there's no double caption.
+        try {
+          const res = await fetch(`/api/vimeo-captions/${id}`);
+          if (res.ok) {
+            const vtt = await res.text();
+            if (!alive()) return;
+            cuesTargetRef.current = parseVtt(vtt);
+            return;
           }
-        });
+        } catch {}
+
+        // Fallback: proxy failed (no caption track, Vimeo 403 even
+        // server-side, private video requiring a hash, etc.). Enable
+        // Vimeo's native captions so at least one set shows; cuesTargetRef
+        // stays empty so our overlay sits idle and no double appears.
+        await player.enableTextTrack(track.language, track.kind);
       } catch {}
     }).catch(() => {});
   };
@@ -177,7 +269,10 @@ export default function EditorialVideosRotator({
     outgoingContainer: React.RefObject<HTMLDivElement | null>,
     afterSwitch: () => void,
   ) => {
-    if (captionBox.current) captionBox.current.textContent = "";
+    // Stop polling against the outgoing player immediately; the last thing
+    // we want is a 250ms-late poll writing the old player's cue text into
+    // captionBox while the crossfade is happening.
+    stopCaptionSync();
 
     let done = false;
     const doSwitch = () => {
@@ -187,6 +282,10 @@ export default function EditorialVideosRotator({
       outgoingContainer.current?.classList.remove("active");
       afterSwitch();
       watchPlayback(incomingPlayer);
+      if (incomingPlayer) {
+        const cuesRef = incomingPlayer === playerA.current ? cuesA : cuesB;
+        startCaptionSync(incomingPlayer, cuesRef);
+      }
     };
 
     if (!incomingPlayer) { doSwitch(); return; }
@@ -247,6 +346,11 @@ export default function EditorialVideosRotator({
 
     // Preload next video paused so it doesn't compete for bandwidth
     loadInto(containerB.current, playerB, next.link, true);
+
+    // The first video never goes through activateAndSwitch, so wire its
+    // caption sync up directly. cuesA may still be empty here (VTT fetches
+    // async) — the polling timer just shows nothing until cues land.
+    if (playerA.current) startCaptionSync(playerA.current, cuesA);
   };
 
   /* ---------- ROTATION ---------- */
