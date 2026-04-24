@@ -112,7 +112,7 @@ export default function AwardsDashboard({
       </header>
 
       {/* ================= MAIN CONTENT ================= */}
-      <main className="flex-1 flex flex-col md:flex-row items-stretch justify-center px-3 md:px-8 py-4 gap-8 pb-[100px]">
+      <main className="flex-1 md:min-h-0 md:overflow-hidden flex flex-col md:flex-row items-stretch justify-center px-3 md:px-8 py-4 gap-8 pb-[100px]">
         <div className="w-full max-w-[1920px] flex flex-col md:flex-row justify-between gap-8 px-3 md:px-8 ">
           <AwardCountdown awards={awards} />
           {showVideoRotator && (
@@ -134,12 +134,16 @@ export default function AwardsDashboard({
             <TickerCard
               feedUrl={exclusiveFeedUrl}
               duration={cardduration}
+              fontSize="clamp(20px, 2vw, 38px)"
+              height="clamp(65px, 6vh, 80px)"
             />
           </div>
           <div className="flex-1 min-w-0">
             <TickerStrip
               feedUrl={feedUrl}
               speed={stripspeed}
+              fontSize="clamp(20px, 2vw, 38px)"
+              height="clamp(65px, 6vh, 80px)"
             />
           </div>
         </div>

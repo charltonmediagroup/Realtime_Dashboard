@@ -64,6 +64,7 @@ export default function EditorialVideosTicker() {
               feedUrl={exclusiveFeeds}
               duration={4000}
               fontSize="clamp(20px, 2vw, 38px)"
+              height="clamp(65px, 6vh, 80px)"
             />
           </div>
         )}
@@ -73,6 +74,7 @@ export default function EditorialVideosTicker() {
               feedUrl={newsFeeds}
               speed={60}
               fontSize="clamp(20px, 2vw, 38px)"
+              height="clamp(65px, 6vh, 80px)"
             />
           </div>
         )}
