@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import DashboardControls from "@/src/components/DashboardControls";
-import { RANGE_OPTIONS, type RangeKey } from "./range";
+import { RANGE_OPTIONS, SECTION_OPTIONS, type RangeKey } from "./range";
 
 export type ArticleRow = {
   brand: string;
@@ -28,6 +28,7 @@ interface Props {
   authors: AuthorRow[];
   rangeKey: RangeKey;
   rangeLabel: string;
+  sectionSlug: string;
   brandCount: number;
 }
 
@@ -79,6 +80,7 @@ export default function EditorialLeaderboard({
   authors,
   rangeKey,
   rangeLabel,
+  sectionSlug,
   brandCount,
 }: Props) {
   const router = useRouter();
@@ -115,6 +117,18 @@ export default function EditorialLeaderboard({
       router.push(`?${params.toString()}`);
     });
   };
+
+  const handleSectionChange = (next: string) => {
+    const params = new URLSearchParams(searchParams.toString());
+    if (next) params.set("section", next);
+    else params.delete("section");
+    startTransition(() => {
+      router.push(`?${params.toString()}`);
+    });
+  };
+
+  const sectionLabel =
+    SECTION_OPTIONS.find((o) => o.value === sectionSlug)?.label ?? "All sections";
 
   // Auto rotate pages of journalists.
   useEffect(() => {
@@ -363,7 +377,8 @@ export default function EditorialLeaderboard({
                 className="px-3 py-2"
                 style={{ color: "#6b7280", fontSize: totalSummarySize }}
               >
-                {authors.length} journalist{authors.length === 1 ? "" : "s"} · {rangeLabel} · {brandCount} Publications
+                {authors.length} journalist{authors.length === 1 ? "" : "s"} · {rangeLabel}
+                {sectionSlug ? ` · ${sectionLabel}` : ""} · {brandCount} Publications
               </td>
               <td
                 className="px-4 py-2 text-right font-mono font-bold"
@@ -582,6 +597,18 @@ export default function EditorialLeaderboard({
           className="px-4 py-2 rounded bg-black/40 text-white hover:bg-black/60 disabled:opacity-50 disabled:cursor-wait [&>option]:bg-gray-800 [&>option]:text-white"
         >
           {RANGE_OPTIONS.map((opt) => (
+            <option key={opt.value} value={opt.value}>
+              {opt.label}
+            </option>
+          ))}
+        </select>
+        <select
+          value={sectionSlug}
+          onChange={(e) => handleSectionChange(e.target.value)}
+          disabled={isPending}
+          className="px-4 py-2 rounded bg-black/40 text-white hover:bg-black/60 disabled:opacity-50 disabled:cursor-wait [&>option]:bg-gray-800 [&>option]:text-white"
+        >
+          {SECTION_OPTIONS.map((opt) => (
             <option key={opt.value} value={opt.value}>
               {opt.label}
             </option>

@@ -13,7 +13,7 @@ import EditorialLeaderboard, {
   type ArticleRow,
 } from "./EditorialLeaderboard";
 import AutoHideBanner from "./AutoHideBanner";
-import { RANGE_OPTIONS, type RangeKey } from "./range";
+import { RANGE_OPTIONS, SECTION_OPTIONS, pathMatchesSection, type RangeKey } from "./range";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -186,14 +186,21 @@ function isValidRange(s: string | undefined): s is RangeKey {
   return !!s && RANGE_OPTIONS.some((o) => o.value === s);
 }
 
+function normalizeSection(s: string | undefined): string {
+  if (!s) return "";
+  const v = s.trim().toLowerCase();
+  return SECTION_OPTIONS.some((o) => o.value === v) ? v : "";
+}
+
 export default async function EditorialLeaderboardPage({
   searchParams,
 }: {
-  searchParams: Promise<{ cache?: string; range?: string }>;
+  searchParams: Promise<{ cache?: string; range?: string; section?: string }>;
 }) {
   const params = await searchParams;
   const forceRefresh = params.cache === "false";
   const rangeKey: RangeKey = isValidRange(params.range) ? params.range : "30d";
+  const sectionSlug = normalizeSection(params.section);
   const { from, to, label } = computeDateRange(rangeKey);
 
   const raw = process.env.GOOGLE_SERVICE_ACCOUNT_JSON;
@@ -210,12 +217,17 @@ export default async function EditorialLeaderboardPage({
   const client = new BetaAnalyticsDataClient({ credentials: JSON.parse(raw) });
 
   let editorialIdx: EditorialIndex | null = null;
-  let sheetError: string | null = null;
+  let rosterError: string | null = null;
+  let rosterCount = 0;
   try {
     const accounts = await getEditorialAccounts(forceRefresh);
     editorialIdx = buildEditorialIndex(accounts);
+    rosterCount = accounts.length;
+    if (rosterCount === 0) {
+      rosterError = "editorial-roster doc is empty in dashboard-config";
+    }
   } catch (e) {
-    sheetError = e instanceof Error ? e.message : String(e);
+    rosterError = e instanceof Error ? e.message : String(e);
   }
 
   const scraped = await fetchAllArticles(from, to);
@@ -224,6 +236,7 @@ export default async function EditorialLeaderboardPage({
   for (const a of scraped) {
     const brand = HOST_TO_BRAND.get(a.host);
     if (!brand) continue;
+    if (!pathMatchesSection(a.alias, sectionSlug)) continue;
     const list = articlesByBrand.get(brand) ?? [];
     list.push(a);
     articlesByBrand.set(brand, list);
@@ -267,26 +280,27 @@ export default async function EditorialLeaderboardPage({
     }
   }
 
+  // Strict editorial-only: if the DB roster wasn't loaded, no rows survive.
+  // This avoids accidentally surfacing non-editorial authors on a DB hiccup.
   const authorMap = new Map<string, AuthorRow>();
-  for (const row of allRows) {
-    if (!row.authorName) continue;
-    let canonicalName = row.authorName;
-    if (editorialIdx) {
+  if (editorialIdx) {
+    for (const row of allRows) {
+      if (!row.authorName) continue;
       const acct = resolveAuthor(row.authorName, editorialIdx);
       if (!acct) continue;
-      canonicalName = acct.name;
+      const canonicalName = acct.name;
+      const key = canonicalName.toLowerCase();
+      const g = authorMap.get(key) ?? {
+        authorName: canonicalName,
+        brands: [],
+        articles: [],
+        totalViews: 0,
+      };
+      if (!g.brands.includes(row.brand)) g.brands.push(row.brand);
+      g.articles.push(row);
+      g.totalViews += row.views;
+      authorMap.set(key, g);
     }
-    const key = canonicalName.toLowerCase();
-    const g = authorMap.get(key) ?? {
-      authorName: canonicalName,
-      brands: [],
-      articles: [],
-      totalViews: 0,
-    };
-    if (!g.brands.includes(row.brand)) g.brands.push(row.brand);
-    g.articles.push(row);
-    g.totalViews += row.views;
-    authorMap.set(key, g);
   }
   const authors = Array.from(authorMap.values())
     .filter((a) => a.totalViews > 0)
@@ -298,11 +312,18 @@ export default async function EditorialLeaderboardPage({
 
   return (
     <div className="min-h-screen max-w-screen overflow-auto bg-white text-gray-900">
-      {(sheetError || brandErrors.length > 0) && (
+      {(rosterError || rosterCount > 0 || brandErrors.length > 0) && (
         <AutoHideBanner>
-          {sheetError && (
-            <div className="bg-amber-50 border-b border-amber-200 text-amber-900 text-xs px-4 py-2">
-              Editorial filter disabled — sheet read failed: {sheetError}. Showing all authors.
+          {rosterError && (
+            <div className="bg-red-50 border-b border-red-200 text-red-900 text-xs px-4 py-2">
+              Editorial roster unavailable — {rosterError}. Leaderboard will be empty until
+              the <code className="font-mono">dashboard-config / editorial-roster</code> doc is fixed.
+              Re-seed via <code className="font-mono">npx tsx scripts/seed-editorial-roster.mjs</code>.
+            </div>
+          )}
+          {!rosterError && rosterCount > 0 && (
+            <div className="bg-emerald-50 border-b border-emerald-200 text-emerald-900 text-xs px-4 py-2">
+              Filtering to {rosterCount} editorial team members from the DB roster.
             </div>
           )}
           {brandErrors.length > 0 && (
@@ -317,6 +338,7 @@ export default async function EditorialLeaderboardPage({
         authors={authors}
         rangeKey={rangeKey}
         rangeLabel={label}
+        sectionSlug={sectionSlug}
         brandCount={Object.keys(BRAND_DOMAINS).length}
       />
     </div>
