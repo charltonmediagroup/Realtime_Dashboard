@@ -13,6 +13,7 @@ export default function AwardsShortsPage() {
         <ShortsPlayer
           className="h-full"
           fetchUrl="/api/videos/classified?department=awards&format=shorts"
+          slots={1}
         />
       </div>
       <EditorialVideosTicker />
