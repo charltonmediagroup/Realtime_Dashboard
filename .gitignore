@@ -48,8 +48,7 @@ src\app\dashboard\editorial\EditorialDashboardClient.tsx
 # claude code local state
 .claude/
 
-# local SQLite datastore
-/data/
-*.db
-*.db-wal
-*.db-shm
+# stale local SQLite from removed adapter
+data/*.db
+data/*.db-wal
+data/*.db-shm

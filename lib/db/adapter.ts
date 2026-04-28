@@ -29,7 +29,7 @@ export interface DbCollection<T = any> {
 }
 
 export interface DbAdapter {
-  kind: "sqlite" | "mongodb";
+  kind: "mongodb";
   getCollection<T = any>(name: string): DbCollection<T>;
   close(): Promise<void>;
 }

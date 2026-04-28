@@ -52,8 +52,6 @@ const adapter = await getAdapter();
 console.log("DB backend:", adapter.kind);
 
 const col = await getCollection("dashboard-config");
-// Pass only `data` in $set — the SQLite adapter unwraps a single-key {data}
-// to store the array directly, so reads come back with doc.data as the array.
 await col.updateOne(
   { uid: "editorial-roster" },
   { $set: { data: ROSTER } },
