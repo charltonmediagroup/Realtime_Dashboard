@@ -14,7 +14,7 @@ interface ApiVideo {
 
 const PROMO_OR_EVENT = /promo videos?|event highlights?/i;
 
-export default function AwardsVideosPage() {
+export default function AwardsPromoEventHighlightsPage() {
   const [videos, setVideos] = useState<{ title: string; link: string }[]>([]);
 
   useEffect(() => {
@@ -24,14 +24,16 @@ export default function AwardsVideosPage() {
         if (!Array.isArray(data)) return;
         setVideos(
           data
-            .filter((v) => !PROMO_OR_EVENT.test(v.title))
+            .filter((v) => PROMO_OR_EVENT.test(v.title))
             .map((v) => ({
               title: v.title,
               link: v.link || `https://vimeo.com/${v.id}`,
             })),
         );
       })
-      .catch((err) => console.error("Failed to load awards videos:", err));
+      .catch((err) =>
+        console.error("Failed to load awards promo/event highlights videos:", err),
+      );
   }, []);
 
   if (!videos.length) {
@@ -52,6 +54,10 @@ export default function AwardsVideosPage() {
       <EditorialVideosTicker />
       <DashboardControls>
         <Link href="/dashboard/awards" className="px-4 py-2 rounded bg-black/40 text-white hover:bg-black/60">← Back</Link>
+        <div className="flex flex-col gap-1">
+          <Link href="/dashboard/awards/shorts" className="px-4 py-1 rounded bg-black/40 text-white hover:bg-black/60 text-center text-sm">Shorts</Link>
+          <Link href="/dashboard/awards/videos" className="px-4 py-1 rounded bg-black/40 text-white hover:bg-black/60 text-center text-sm">Videos</Link>
+        </div>
       </DashboardControls>
       <style>{`
         .fg-video .video-title { display: none !important; }

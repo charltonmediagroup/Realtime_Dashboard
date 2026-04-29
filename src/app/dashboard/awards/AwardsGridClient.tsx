@@ -272,6 +272,7 @@ export default function AwardsGridClient({ awards }: AwardsGridProps) {
         <div className="flex flex-col gap-1">
           <Link href="/dashboard/awards/shorts" className="px-4 py-1 rounded bg-black/40 text-white hover:bg-black/60 text-center text-sm">Shorts</Link>
           <Link href="/dashboard/awards/videos" className="px-4 py-1 rounded bg-black/40 text-white hover:bg-black/60 text-center text-sm">Videos</Link>
+          <Link href="/dashboard/awards/promo-event-highlights" className="px-4 py-1 rounded bg-black/40 text-white hover:bg-black/60 text-center text-sm">Promo &amp; Event Highlights</Link>
         </div>
       </DashboardControls>
     </div>
