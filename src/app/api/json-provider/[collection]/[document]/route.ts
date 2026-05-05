@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCollection } from "@/lib/mongodb";
+import { isUnauthorized, requireAdminSession } from "@/lib/adminAuth";
 
 interface CacheEntry<T> {
   data: T;
@@ -198,6 +199,9 @@ export async function PUT(
   { params }: { params: Promise<{ collection?: string; document?: string }> }
 ) {
   try {
+    const auth = await requireAdminSession(req);
+    if (isUnauthorized(auth)) return auth;
+
     const { collection, document } = await params;
 
     if (!collection || !document) {

@@ -117,6 +117,10 @@ export default function Home() {
       <Link href="/all-active?grouped=true" className="hover:underline">
         View active users
       </Link>
+
+      <Link href="/admin" className="text-sm text-neutral-500 hover:underline">
+        Admin
+      </Link>
     </div>
   );
 }

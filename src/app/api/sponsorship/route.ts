@@ -1,10 +1,11 @@
 import { NextResponse } from "next/server";
 import { getSheetsClient } from "@/lib/googleOAuth";
+import { BIZZCON_LEADERBOARD_SHEET } from "@/lib/leaderboardSources";
 
 export const dynamic = "force-dynamic";
 
-const SHEET_ID = "1QgONEKtOeeE12ts5maQlMfAlnee1qxi7O-E8zhtJjxY";
-const SHEET_GID = 124466268;
+const SHEET_ID = BIZZCON_LEADERBOARD_SHEET.spreadsheetId;
+const SHEET_GID = BIZZCON_LEADERBOARD_SHEET.gid!;
 const RANGE_SUFFIX = "!A1:J40";
 
 type Cell = number | string | null;
@@ -164,7 +165,7 @@ export async function GET() {
     };
 
     return NextResponse.json(payload, {
-      headers: { "Cache-Control": "s-maxage=1800, stale-while-revalidate=3600" },
+      headers: { "Cache-Control": "no-store" },
     });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : String(err);
