@@ -121,7 +121,7 @@ export default function AwardsLeaderboard() {
             <tr className="text-center font-semibold uppercase text-white/90" style={{ fontSize: headerSize, backgroundColor: "#3a3a3a", letterSpacing: "0.12em" }}>
               <th className="px-2 py-3 w-[14%]">Rank</th>
               <th className="pl-0 pr-3 py-3 w-[56%] text-left">Person in Charge</th>
-              <th className="px-3 py-3 w-[30%] text-right">Deals</th>
+              <th className="px-3 py-3 w-[30%] text-right">Number of Paying Nominations</th>
             </tr>
             <tr><td colSpan={3} style={{ padding: 0, height: "2px", background: "linear-gradient(90deg, #d4a853, transparent)" }} /></tr>
           </thead>
@@ -199,7 +199,7 @@ export default function AwardsLeaderboard() {
             <tr className="text-center font-semibold uppercase text-white/90" style={{ fontSize: mHeaderSize, backgroundColor: "#3a3a3a", letterSpacing: "0.12em" }}>
               <th className="px-1 py-2 w-[16%]">Rank</th>
               <th className="px-1 py-2 w-[50%] text-left">Person</th>
-              <th className="px-1 py-2 pr-3 w-[34%] text-right">Deals</th>
+              <th className="px-1 py-2 pr-3 w-[34%] text-right">Number of Paying Nominations</th>
             </tr>
             <tr><td colSpan={3} style={{ padding: 0, height: "2px", background: "linear-gradient(90deg, #d4a853, transparent)" }} /></tr>
           </thead>
