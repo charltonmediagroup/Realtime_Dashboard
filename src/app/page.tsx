@@ -57,6 +57,9 @@ export default function Home() {
           <Link href="/dashboard/awards/shorts" className="hover:underline ml-8">
             Awards Shorts
           </Link>
+          <Link href="/dashboard/awards/promo-event-highlights" className="hover:underline ml-8">
+            Promo &amp; Event Highlights
+          </Link>
           <Link href="/dashboard/awards/leaderboard" className="hover:underline ml-8">
             Leaderboard
           </Link>
