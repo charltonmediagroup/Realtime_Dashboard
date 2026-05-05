@@ -26,10 +26,14 @@ export interface DbCollection<T = any> {
     update: { $set: Record<string, any> },
     options?: UpdateOptions,
   ): Promise<void>;
+  insertOne(doc: Record<string, any>): Promise<void>;
+  deleteOne(filter: Filter): Promise<{ deletedCount: number }>;
+  distinct(field: string, filter?: Filter): Promise<any[]>;
 }
 
 export interface DbAdapter {
   kind: "mongodb";
   getCollection<T = any>(name: string): DbCollection<T>;
+  listCollectionNames(): Promise<string[]>;
   close(): Promise<void>;
 }

@@ -1,34 +1,19 @@
-"use client";
+import BizzconBrandClient from "./BizzconBrandClient";
+import PublicReferenceView from "@/src/components/PublicReferenceView";
+import { findPublishedReference } from "@/lib/savedReferences";
 
-import { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
-import BizzconGridClient, { BizzconEvent } from "../BizzconGridClient";
-import LoadingPage from "@/src/components/LoadingPage";
+interface PageProps {
+  params: { brand: string } | Promise<{ brand: string }>;
+}
 
-export default function BizzconBrandPage() {
-  const { brand } = useParams<{ brand: string }>();
-  const [events, setEvents] = useState<BizzconEvent[] | null>(null);
-  const [error, setError] = useState<string | null>(null);
+export default async function BizzconBrandPage({ params }: PageProps) {
+  const resolvedParams = await params;
+  const { brand } = resolvedParams;
 
-  useEffect(() => {
-    fetch(`/api/bizzcon/${brand}`)
-      .then((res) => {
-        if (!res.ok) throw new Error("Failed to fetch events");
-        return res.json();
-      })
-      .then(setEvents)
-      .catch((err) => setError(err.message));
-  }, [brand]);
-
-  if (error) {
-    return (
-      <div className="flex items-center justify-center h-screen bg-gray-800 text-red-400">
-        {error}
-      </div>
-    );
+  const ref = await findPublishedReference("bizzcon", brand);
+  if (ref) {
+    return <PublicReferenceView reference={ref} />;
   }
 
-  if (!events) return <LoadingPage loadingText={`Loading ${brand} events...`} />;
-
-  return <BizzconGridClient events={events} />;
+  return <BizzconBrandClient />;
 }

@@ -59,6 +59,25 @@ class MongoCollection<T = any> implements DbCollection<T> {
       upsert: options?.upsert,
     });
   }
+
+  async insertOne(doc: Record<string, unknown>): Promise<void> {
+    const col = this.db.collection(this.name);
+    await col.insertOne(doc);
+  }
+
+  async deleteOne(filter: Filter): Promise<{ deletedCount: number }> {
+    const col = this.db.collection(this.name);
+    const res = await col.deleteOne(filter as MongoFilter<Record<string, unknown>>);
+    return { deletedCount: res.deletedCount ?? 0 };
+  }
+
+  async distinct(field: string, filter?: Filter): Promise<unknown[]> {
+    const col = this.db.collection(this.name);
+    return await col.distinct(
+      field,
+      (filter ?? {}) as MongoFilter<Record<string, unknown>>,
+    );
+  }
 }
 
 export class MongoAdapter implements DbAdapter {
@@ -78,6 +97,11 @@ export class MongoAdapter implements DbAdapter {
 
   getCollection<T = unknown>(name: string): DbCollection<T> {
     return new MongoCollection<T>(this.db, name);
+  }
+
+  async listCollectionNames(): Promise<string[]> {
+    const cols = await this.db.listCollections({}, { nameOnly: true }).toArray();
+    return cols.map((c) => c.name).sort();
   }
 
   async close() {

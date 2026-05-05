@@ -12,6 +12,8 @@ interface ApiVideo {
   link: string;
 }
 
+const PROMO_OR_EVENT = /promo videos?|event highlights?/i;
+
 export default function AwardsVideosPage() {
   const [videos, setVideos] = useState<{ title: string; link: string }[]>([]);
 
@@ -21,10 +23,12 @@ export default function AwardsVideosPage() {
       .then((data: ApiVideo[]) => {
         if (!Array.isArray(data)) return;
         setVideos(
-          data.map((v) => ({
-            title: v.title,
-            link: v.link || `https://vimeo.com/${v.id}`,
-          })),
+          data
+            .filter((v) => !PROMO_OR_EVENT.test(v.title))
+            .map((v) => ({
+              title: v.title,
+              link: v.link || `https://vimeo.com/${v.id}`,
+            })),
         );
       })
       .catch((err) => console.error("Failed to load awards videos:", err));

@@ -236,6 +236,7 @@ export default async function EditorialLeaderboardPage({
   for (const a of scraped) {
     const brand = HOST_TO_BRAND.get(a.host);
     if (!brand) continue;
+    if (a.alias.includes("/commentary/")) continue;
     if (!pathMatchesSection(a.alias, sectionSlug)) continue;
     const list = articlesByBrand.get(brand) ?? [];
     list.push(a);
@@ -282,24 +283,36 @@ export default async function EditorialLeaderboardPage({
 
   // Strict editorial-only: if the DB roster wasn't loaded, no rows survive.
   // This avoids accidentally surfacing non-editorial authors on a DB hiccup.
+  // Crossposts (same path on multiple brand hosts) are deduped per author by alias,
+  // keeping the brand row with the highest views.
   const authorMap = new Map<string, AuthorRow>();
   if (editorialIdx) {
+    type Bucket = { row: AuthorRow; byAlias: Map<string, ArticleRow> };
+    const buckets = new Map<string, Bucket>();
     for (const row of allRows) {
       if (!row.authorName) continue;
       const acct = resolveAuthor(row.authorName, editorialIdx);
       if (!acct) continue;
       const canonicalName = acct.name;
       const key = canonicalName.toLowerCase();
-      const g = authorMap.get(key) ?? {
-        authorName: canonicalName,
-        brands: [],
-        articles: [],
-        totalViews: 0,
-      };
-      if (!g.brands.includes(row.brand)) g.brands.push(row.brand);
-      g.articles.push(row);
-      g.totalViews += row.views;
-      authorMap.set(key, g);
+      let bucket = buckets.get(key);
+      if (!bucket) {
+        bucket = {
+          row: { authorName: canonicalName, brands: [], articles: [], totalViews: 0 },
+          byAlias: new Map(),
+        };
+        buckets.set(key, bucket);
+      }
+      if (!bucket.row.brands.includes(row.brand)) bucket.row.brands.push(row.brand);
+      const existing = bucket.byAlias.get(row.alias);
+      if (!existing || row.views > existing.views) {
+        bucket.byAlias.set(row.alias, row);
+      }
+    }
+    for (const [key, bucket] of buckets) {
+      bucket.row.articles = Array.from(bucket.byAlias.values());
+      bucket.row.totalViews = bucket.row.articles.reduce((sum, a) => sum + a.views, 0);
+      authorMap.set(key, bucket.row);
     }
   }
   const authors = Array.from(authorMap.values())

@@ -1,11 +1,12 @@
 import { NextResponse } from "next/server";
 import { getSheetsClient } from "@/lib/googleOAuth";
+import { AWARDS_LEADERBOARD_SHEET } from "@/lib/leaderboardSources";
 
 export const dynamic = "force-dynamic";
 
-const SHEET_ID = "1XaCvMWBcCgAsDByoWJE-ru3fv0K23U7rxI87_vFNWcE";
-const TAB_NAME = "Awards Leaderboard";
-const RANGE_SUFFIX = "!A1:E2000";
+const SHEET_ID = AWARDS_LEADERBOARD_SHEET.spreadsheetId;
+const TAB_NAME = AWARDS_LEADERBOARD_SHEET.tabName!;
+const RANGE_SUFFIX = AWARDS_LEADERBOARD_SHEET.range!;
 
 type Entry = {
   name: string;
@@ -133,7 +134,7 @@ export async function GET() {
     };
 
     return NextResponse.json(payload, {
-      headers: { "Cache-Control": "s-maxage=1800, stale-while-revalidate=3600" },
+      headers: { "Cache-Control": "no-store" },
     });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : String(err);
