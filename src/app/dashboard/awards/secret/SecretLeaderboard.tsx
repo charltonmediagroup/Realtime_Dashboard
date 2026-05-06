@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import DashboardControls from "@/src/components/DashboardControls";
 
 const REFRESH_MS = 30 * 60 * 1000;
@@ -18,8 +18,8 @@ type Payload = {
   lastUpdated: string;
 };
 
-function formatCount(n: number): string {
-  return n.toLocaleString("en-US");
+function formatCurrency(n: number): string {
+  return `$${Math.round(n).toLocaleString("en-US")}`;
 }
 
 function rankColor(rank: number): string {
@@ -29,7 +29,7 @@ function rankColor(rank: number): string {
   return "#ffffff";
 }
 
-export default function AwardsLeaderboard() {
+export default function SecretLeaderboard() {
   const [data, setData] = useState<Payload | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
@@ -62,13 +62,7 @@ export default function AwardsLeaderboard() {
     return () => { cancelledRef.current = true; clearInterval(id); };
   }, [load]);
 
-  const ranked = useMemo<Entry[]>(() => {
-    if (!data) return [];
-    return [...data.entries].sort((a, b) => b.deals - a.deals);
-  }, [data]);
-  const grandDeals = useMemo<number>(() => ranked.reduce((s, e) => s + e.deals, 0), [ranked]);
-
-  const entryCount = ranked.length;
+  const entryCount = data?.entries.length ?? 0;
   const effectivePageSize = pageSize === "all" ? Math.max(1, entryCount) : pageSize;
   const totalPagesForRotation = Math.max(1, Math.ceil(entryCount / effectivePageSize));
   useEffect(() => { setPageIndex(0); }, [pageSize]);
@@ -96,10 +90,11 @@ export default function AwardsLeaderboard() {
     );
   }
 
-  const resolvedPageSize = pageSize === "all" ? Math.max(1, ranked.length) : pageSize;
-  const totalPages = Math.max(1, Math.ceil(ranked.length / resolvedPageSize));
+  const entries = data.entries;
+  const resolvedPageSize = pageSize === "all" ? Math.max(1, entries.length) : pageSize;
+  const totalPages = Math.max(1, Math.ceil(entries.length / resolvedPageSize));
   const currentPage = Math.min(pageIndex, totalPages - 1);
-  const displayed = ranked.slice(currentPage * resolvedPageSize, (currentPage + 1) * resolvedPageSize);
+  const displayed = entries.slice(currentPage * resolvedPageSize, (currentPage + 1) * resolvedPageSize);
   const padCount = Math.max(0, resolvedPageSize - displayed.length);
   const rowCount = resolvedPageSize + 2;
   const effectiveCount = Math.min(rowCount, 12);
@@ -121,7 +116,7 @@ export default function AwardsLeaderboard() {
             <tr className="text-center font-semibold uppercase text-white/90" style={{ fontSize: headerSize, backgroundColor: "#3a3a3a", letterSpacing: "0.12em" }}>
               <th className="px-2 py-3 w-[14%]">Rank</th>
               <th className="pl-0 pr-3 py-3 w-[56%] text-left">Person in Charge</th>
-              <th className="px-3 py-3 w-[30%] text-right">Number of Paying Nominations</th>
+              <th className="px-3 py-3 w-[30%] text-right">Total Sales</th>
             </tr>
             <tr><td colSpan={3} style={{ padding: 0, height: "2px", background: "linear-gradient(90deg, #d4a853, transparent)" }} /></tr>
           </thead>
@@ -147,8 +142,8 @@ export default function AwardsLeaderboard() {
                   <td className="pl-0 pr-2 py-1 text-left" style={{ fontWeight: 300 }}>
                     {row.name}
                   </td>
-                  <td className="px-3 py-1 text-right font-mono font-bold" style={{ color: row.deals > 0 ? "#00ff88" : "#bbbbbb", textShadow: row.deals > 0 ? "0 1px 3px rgba(0,0,0,0.8), 0 0 12px rgba(0,255,136,0.3)" : "none" }}>
-                    {formatCount(row.deals)}
+                  <td className="px-3 py-1 text-right font-mono font-bold" style={{ color: row.total > 0 ? "#00ff88" : "#bbbbbb", textShadow: row.total > 0 ? "0 1px 3px rgba(0,0,0,0.8), 0 0 12px rgba(0,255,136,0.3)" : "none" }}>
+                    {formatCurrency(row.total)}
                   </td>
                 </tr>
               );
@@ -185,7 +180,7 @@ export default function AwardsLeaderboard() {
                 Total
               </td>
               <td className="px-3 py-1 text-right font-mono font-bold" style={{ fontSize: "1.15em", textShadow: "0 1px 3px rgba(0,0,0,0.8), 0 0 8px #d4a85340, 0 0 20px #d4a85320" }}>
-                {formatCount(grandDeals)}
+                {formatCurrency(data.grandTotal)}
               </td>
             </tr>
           </tbody>
@@ -199,7 +194,7 @@ export default function AwardsLeaderboard() {
             <tr className="text-center font-semibold uppercase text-white/90" style={{ fontSize: mHeaderSize, backgroundColor: "#3a3a3a", letterSpacing: "0.12em" }}>
               <th className="px-1 py-2 w-[16%]">Rank</th>
               <th className="px-1 py-2 w-[50%] text-left">Person</th>
-              <th className="px-1 py-2 pr-3 w-[34%] text-right">Number of Paying Nominations</th>
+              <th className="px-1 py-2 pr-3 w-[34%] text-right">Total</th>
             </tr>
             <tr><td colSpan={3} style={{ padding: 0, height: "2px", background: "linear-gradient(90deg, #d4a853, transparent)" }} /></tr>
           </thead>
@@ -225,8 +220,8 @@ export default function AwardsLeaderboard() {
                   <td className="px-1 py-1 text-left" style={{ fontWeight: 300 }}>
                     {row.name}
                   </td>
-                  <td className="px-1 py-1 pr-3 text-right font-mono font-bold" style={{ color: row.deals > 0 ? "#00ff88" : "#bbbbbb", textShadow: row.deals > 0 ? "0 1px 3px rgba(0,0,0,0.8), 0 0 12px rgba(0,255,136,0.3)" : "none" }}>
-                    {formatCount(row.deals)}
+                  <td className="px-1 py-1 pr-3 text-right font-mono font-bold" style={{ color: row.total > 0 ? "#00ff88" : "#bbbbbb", textShadow: row.total > 0 ? "0 1px 3px rgba(0,0,0,0.8), 0 0 12px rgba(0,255,136,0.3)" : "none" }}>
+                    {formatCurrency(row.total)}
                   </td>
                 </tr>
               );
@@ -263,7 +258,7 @@ export default function AwardsLeaderboard() {
                 Total
               </td>
               <td className="px-1 py-1 pr-3 text-right font-mono font-bold" style={{ fontSize: "1.1em", textShadow: "0 1px 3px rgba(0,0,0,0.8), 0 0 8px #d4a85340, 0 0 20px #d4a85320" }}>
-                {formatCount(grandDeals)}
+                {formatCurrency(data.grandTotal)}
               </td>
             </tr>
           </tbody>
