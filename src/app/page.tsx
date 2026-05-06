@@ -117,6 +117,10 @@ export default function Home() {
         </div>
       </div>
 
+      <Link href="/dashboard/mailchimp" className="hover:underline font-semibold">
+        Mailchimp
+      </Link>
+
       <Link href="/all-active?grouped=true" className="hover:underline">
         View active users
       </Link>
