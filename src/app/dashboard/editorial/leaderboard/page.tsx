@@ -2,6 +2,7 @@ import { BetaAnalyticsDataClient } from "@google-analytics/data";
 import * as cheerio from "cheerio";
 import BRAND_PROPERTIES_RAW from "@/data/brand_properties.json";
 import GA4_PROPERTIES_RAW from "@/data/brand_ga4_properties.json";
+import { getCollection } from "@/lib/mongodb";
 import {
   buildEditorialIndex,
   getEditorialAccounts,
@@ -22,33 +23,42 @@ const SOURCE_DOMAIN = "asianbankingandfinance.net"; // any one brand works — v
 const MAX_PAGES = 60; // 30 days needs ~57 pages; "this month" similar; smaller for shorter ranges
 const PAGE_BATCH_SIZE = 10;
 
-const BRAND_DOMAINS: Record<string, string> = {
-  sbr: "sbr.com.sg",
-  hkb: "hongkongbusiness.hk",
-  abf: "asianbankingandfinance.net",
-  abr: "asianbusinessreview.com",
-  ia: "insuranceasia.com",
-  ra: "retailasia.com",
-  ap: "asian-power.com",
-  hca: "healthcareasiamagazine.com",
-  qsr: "qsrmedia.com",
-  "qsr-asia": "qsrmedia.asia",
-  "qsr-aus": "qsrmedia.com.au",
-  "qsr-uk": "qsrmedia.co.uk",
-  esgb: "esgbusiness.com",
-  gm: "govmedia.asia",
-  invest: "investmentasia.net",
-  mir: "marineindustrial.com",
-  rea: "realestateasia.com",
-  ma: "manufacturing.asia",
-};
-
 const BRAND_PROPERTIES = BRAND_PROPERTIES_RAW as Record<string, { name: string }>;
 const GA4_PROPS = GA4_PROPERTIES_RAW as Record<string, string>;
 
-const HOST_TO_BRAND = new Map<string, string>(
-  Object.entries(BRAND_DOMAINS).map(([brand, host]) => [host, brand]),
-);
+interface SiteEntry {
+  url?: string;
+  name?: string;
+  editorial?: boolean;
+}
+
+function hostnameOf(url: string | undefined): string | null {
+  if (!url) return null;
+  try {
+    return new URL(url).hostname.replace(/^www\./, "");
+  } catch {
+    return null;
+  }
+}
+
+async function loadBrandDomains(): Promise<{
+  brandDomains: Record<string, string>;
+  hostToBrand: Map<string, string>;
+}> {
+  const col = await getCollection("dashboard-config");
+  const doc = await col.findOne({ uid: "brand-all-properties" });
+  const config: Record<string, SiteEntry> = (doc?.data as Record<string, SiteEntry>) || {};
+
+  const brandDomains: Record<string, string> = {};
+  const hostToBrand = new Map<string, string>();
+  for (const [brand, site] of Object.entries(config)) {
+    const host = hostnameOf(site?.url);
+    if (!host) continue;
+    brandDomains[brand] = host;
+    hostToBrand.set(host, brand);
+  }
+  return { brandDomains, hostToBrand };
+}
 
 type ScrapedArticle = {
   title: string;
@@ -215,6 +225,8 @@ export default async function EditorialLeaderboardPage({
   }
 
   const client = new BetaAnalyticsDataClient({ credentials: JSON.parse(raw) });
+
+  const { brandDomains: BRAND_DOMAINS, hostToBrand: HOST_TO_BRAND } = await loadBrandDomains();
 
   let editorialIdx: EditorialIndex | null = null;
   let rosterError: string | null = null;
