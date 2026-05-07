@@ -32,6 +32,27 @@ interface SiteEntry {
   editorial?: boolean;
 }
 
+const FALLBACK_BRAND_DOMAINS: Record<string, string> = {
+  sbr: "sbr.com.sg",
+  hkb: "hongkongbusiness.hk",
+  abf: "asianbankingandfinance.net",
+  abr: "asianbusinessreview.com",
+  ia: "insuranceasia.com",
+  ra: "retailasia.com",
+  ap: "asian-power.com",
+  hca: "healthcareasiamagazine.com",
+  qsr: "qsrmedia.com",
+  "qsr-asia": "qsrmedia.asia",
+  "qsr-aus": "qsrmedia.com.au",
+  "qsr-uk": "qsrmedia.co.uk",
+  esgb: "esgbusiness.com",
+  gm: "govmedia.asia",
+  invest: "investmentasia.net",
+  mir: "marineindustrial.com",
+  rea: "realestateasia.com",
+  ma: "manufacturing.asia",
+};
+
 function hostnameOf(url: string | undefined): string | null {
   if (!url) return null;
   try {
@@ -41,23 +62,42 @@ function hostnameOf(url: string | undefined): string | null {
   }
 }
 
-async function loadBrandDomains(): Promise<{
-  brandDomains: Record<string, string>;
-  hostToBrand: Map<string, string>;
-}> {
-  const col = await getCollection("dashboard-config");
-  const doc = await col.findOne({ uid: "brand-all-properties" });
-  const config: Record<string, SiteEntry> = (doc?.data as Record<string, SiteEntry>) || {};
-
-  const brandDomains: Record<string, string> = {};
+function buildMaps(brandDomains: Record<string, string>) {
   const hostToBrand = new Map<string, string>();
-  for (const [brand, site] of Object.entries(config)) {
-    const host = hostnameOf(site?.url);
-    if (!host) continue;
-    brandDomains[brand] = host;
+  for (const [brand, host] of Object.entries(brandDomains)) {
     hostToBrand.set(host, brand);
   }
   return { brandDomains, hostToBrand };
+}
+
+async function loadBrandDomains(): Promise<{
+  brandDomains: Record<string, string>;
+  hostToBrand: Map<string, string>;
+  source: "mongo" | "fallback";
+  error?: string;
+}> {
+  try {
+    const col = await getCollection("dashboard-config");
+    const doc = await col.findOne({ uid: "brand-all-properties" });
+    const config: Record<string, SiteEntry> = (doc?.data as Record<string, SiteEntry>) || {};
+
+    const brandDomains: Record<string, string> = {};
+    for (const [brand, site] of Object.entries(config)) {
+      const host = hostnameOf(site?.url);
+      if (!host) continue;
+      brandDomains[brand] = host;
+    }
+    if (Object.keys(brandDomains).length === 0) {
+      return { ...buildMaps(FALLBACK_BRAND_DOMAINS), source: "fallback", error: "brand-all-properties returned no brands with urls" };
+    }
+    return { ...buildMaps(brandDomains), source: "mongo" };
+  } catch (e) {
+    return {
+      ...buildMaps(FALLBACK_BRAND_DOMAINS),
+      source: "fallback",
+      error: e instanceof Error ? e.message : String(e),
+    };
+  }
 }
 
 type ScrapedArticle = {
@@ -226,7 +266,12 @@ export default async function EditorialLeaderboardPage({
 
   const client = new BetaAnalyticsDataClient({ credentials: JSON.parse(raw) });
 
-  const { brandDomains: BRAND_DOMAINS, hostToBrand: HOST_TO_BRAND } = await loadBrandDomains();
+  const {
+    brandDomains: BRAND_DOMAINS,
+    hostToBrand: HOST_TO_BRAND,
+    source: brandSource,
+    error: brandError,
+  } = await loadBrandDomains();
 
   let editorialIdx: EditorialIndex | null = null;
   let rosterError: string | null = null;
@@ -337,8 +382,14 @@ export default async function EditorialLeaderboardPage({
 
   return (
     <div className="min-h-screen max-w-screen overflow-auto bg-white text-gray-900">
-      {(rosterError || rosterCount > 0 || brandErrors.length > 0) && (
+      {(rosterError || rosterCount > 0 || brandErrors.length > 0 || brandSource === "fallback") && (
         <AutoHideBanner>
+          {brandSource === "fallback" && (
+            <div className="bg-amber-50 border-b border-amber-200 text-amber-900 text-xs px-4 py-2">
+              Brand list fallback — couldn&apos;t reach <code className="font-mono">dashboard-config / brand-all-properties</code>
+              {brandError ? <> ({brandError})</> : null}. Showing {Object.keys(BRAND_DOMAINS).length} hardcoded brands.
+            </div>
+          )}
           {rosterError && (
             <div className="bg-red-50 border-b border-red-200 text-red-900 text-xs px-4 py-2">
               Editorial roster unavailable — {rosterError}. Leaderboard will be empty until
