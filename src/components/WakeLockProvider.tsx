@@ -11,18 +11,19 @@ export default function WakeLockProvider({
 
   useEffect(() => {
     const requestWakeLock = async () => {
+      if (!("wakeLock" in navigator)) return;
+      if (document.visibilityState !== "visible") return;
       try {
-        if ("wakeLock" in navigator) {
-          wakeLockRef.current = await (navigator as any).wakeLock.request("screen");
-
-          wakeLockRef.current.addEventListener("release", () => {
-            console.log("Wake Lock released");
-          });
-
-          console.log("Wake Lock active");
-        }
+        wakeLockRef.current = await (navigator as any).wakeLock.request("screen");
+        wakeLockRef.current.addEventListener("release", () => {
+          console.log("Wake Lock released");
+        });
+        console.log("Wake Lock active");
       } catch (err) {
-        console.warn("Wake Lock error:", err);
+        // NotAllowedError is expected when the tab isn't focused or policy blocks it.
+        if ((err as Error)?.name !== "NotAllowedError") {
+          console.warn("Wake Lock error:", err);
+        }
       }
     };
 
