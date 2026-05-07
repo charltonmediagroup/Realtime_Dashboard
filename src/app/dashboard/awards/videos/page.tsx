@@ -49,7 +49,7 @@ export default function AwardsVideosPage() {
           <EditorialVideosRotator videos={videos} />
         </div>
       </div>
-      <EditorialVideosTicker />
+      <EditorialVideosTicker newsSource="event-news" />
       <DashboardControls>
         <Link href="/dashboard/awards" className="px-4 py-2 rounded bg-black/40 text-white hover:bg-black/60">← Back</Link>
       </DashboardControls>

@@ -20,38 +20,67 @@ function resolveNewsFeed(cfg: SiteConfig) {
   return base ? `${base}/news-feed.xml` : "";
 }
 
+function resolveEventNewsFeed(cfg: SiteConfig) {
+  const base = stripTrailingSlash(cfg?.url);
+  return base ? `/api/event-news?url=${encodeURIComponent(base)}` : "";
+}
+
 function resolveExclusiveFeed(cfg: SiteConfig) {
   if (cfg?.exclusiveFeed) return cfg.exclusiveFeed;
   const base = stripTrailingSlash(cfg?.url);
   return base ? `${base}/exclusive-news-feed.xml` : "";
 }
 
-export default function EditorialVideosTicker() {
+interface EditorialVideosTickerProps {
+  newsSource?: "site" | "event-news";
+}
+
+export default function EditorialVideosTicker({
+  newsSource = "site",
+}: EditorialVideosTickerProps = {}) {
   const [configs, setConfigs] = useState<BrandConfigs>({});
 
   useEffect(() => {
-    const load = async () => {
+    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "";
+    const url = `${baseUrl}/api/json-provider/dashboard-config/brand-all-properties?filter[editorial]=true`;
+    const delays = [0, 800, 2000, 4000];
+    let cancelled = false;
+    const timers: ReturnType<typeof setTimeout>[] = [];
+
+    const attempt = async (i: number) => {
+      if (cancelled) return;
       try {
-        const baseUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "";
-        const res = await fetch(
-          `${baseUrl}/api/json-provider/dashboard-config/brand-all-properties?filter[editorial]=true`,
-          { cache: "force-cache" },
-        );
-        setConfigs((await res.json()) as BrandConfigs);
+        const res = await fetch(url, {
+          cache: i === 0 ? "force-cache" : "no-store",
+        });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = (await res.json()) as BrandConfigs;
+        if (!cancelled) setConfigs(data);
       } catch (err) {
-        console.error("Failed to load editorial brand configs:", err);
+        if (cancelled) return;
+        if (i + 1 < delays.length) {
+          timers.push(setTimeout(() => attempt(i + 1), delays[i + 1]));
+        } else {
+          console.error("Failed to load editorial brand configs:", err);
+        }
       }
     };
-    load();
+
+    attempt(0);
+    return () => {
+      cancelled = true;
+      timers.forEach((t) => clearTimeout(t));
+    };
   }, []);
 
   const { exclusiveFeeds, newsFeeds } = useMemo(() => {
     const entries = Object.values(configs);
+    const resolver = newsSource === "event-news" ? resolveEventNewsFeed : resolveNewsFeed;
     return {
       exclusiveFeeds: entries.map(resolveExclusiveFeed).filter(Boolean),
-      newsFeeds: entries.map(resolveNewsFeed).filter(Boolean),
+      newsFeeds: entries.map(resolver).filter(Boolean),
     };
-  }, [configs]);
+  }, [configs, newsSource]);
 
   if (!exclusiveFeeds.length && !newsFeeds.length) return null;
 

@@ -16,7 +16,7 @@ export default function AwardsShortsPage() {
           slots={1}
         />
       </div>
-      <EditorialVideosTicker />
+      <EditorialVideosTicker newsSource="event-news" />
       <DashboardControls>
         <WaitModeToggle />
         <Link href="/dashboard/awards" className="px-4 py-2 rounded bg-black/40 text-white hover:bg-black/60">← Back</Link>

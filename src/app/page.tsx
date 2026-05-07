@@ -69,12 +69,6 @@ export default function Home() {
           <Link href="/dashboard/bizzcon" className="hover:underline font-semibold">
             Bizzcon
           </Link>
-          <Link href="/dashboard/bizzcon/videos" className="hover:underline ml-8">
-            Bizzcon Videos
-          </Link>
-          <Link href="/dashboard/bizzcon/shorts" className="hover:underline ml-8">
-            Bizzcon Shorts
-          </Link>
           <Link href="/dashboard/bizzcon/leaderboard" className="hover:underline ml-8">
             Leaderboard
           </Link>
