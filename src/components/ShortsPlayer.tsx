@@ -175,15 +175,15 @@ export default function ShortsPlayer({
 
   return (
     <div
-      className={`flex items-center justify-evenly gap-4 px-4 py-8 sm:px-6 sm:py-16 ${className}`}
+      className={`flex items-center justify-evenly gap-4 px-4 py-2 sm:px-6 sm:py-4 ${className}`}
     >
       {Array.from({ length: Math.min(cols, videos.length) }).map((_, slot) => {
         const video = videos[slotIndexes[slot] % videos.length];
         if (!video) return null;
         const playerId = `short-${slot}`;
         return (
-          <div key={slot} className="flex flex-col items-center">
-            <div className="relative h-[68vh] sm:h-[80vh] aspect-[9/16] max-w-[92vw] overflow-hidden rounded-lg">
+          <div key={slot} className="flex flex-col items-center justify-center h-full min-h-0">
+            <div className="shorts-box relative h-full max-h-[calc(100%_-_3.5rem)] sm:max-h-[calc(100%_-_3.25rem)] aspect-[9/16] max-w-[92vw] overflow-hidden rounded-lg">
               <iframe
                 ref={(el) => {
                   iframeRefs.current[slot] = el;
@@ -196,7 +196,7 @@ export default function ShortsPlayer({
                 allowFullScreen
               />
             </div>
-            <p className="text-xl font-semibold mt-2 text-center uppercase line-clamp-1 text-gray-900">
+            <p className="shorts-title text-base sm:text-xl font-semibold mt-1 text-center uppercase line-clamp-2 text-gray-900">
               {video.title}
             </p>
           </div>

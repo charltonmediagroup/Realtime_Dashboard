@@ -67,7 +67,7 @@ export default function BrandDashboard({
       {/* ================= HEADER ================= */}
       <header className="brand-header flex flex-col md:flex-row items-center gap-4 md:gap-6 px-3 py-4 shrink-0 overflow-x-auto md:overflow-x-visible">
         {/* Left logo */}
-        <div className="flex justify-between w-full md:w-fit">
+        <div className="brand-left flex justify-between w-full md:w-fit">
           {siteConfig?.image && (
             <div className="brand-logo relative h-14 w-40 md:h-24 md:w-64">
               <Image
@@ -82,7 +82,7 @@ export default function BrandDashboard({
 
           <div
             onClick={() => window.location.href = "/"}
-            className="cmg-logo relative h-12 w-20 md:h-24 md:w-32 cursor-pointer block md:hidden"
+            className="cmg-logo cmg-mobile relative h-12 w-20 md:h-24 md:w-32 cursor-pointer block md:hidden"
             title="Home"
           >
             <Image
@@ -96,7 +96,7 @@ export default function BrandDashboard({
         </div>
 
         {/* Metrics */}
-        <div className="grid grid-cols-2 gap-2 md:flex md:flex-nowrap md:justify-evenly md:gap-4 flex-1 text-gray-900">
+        <div className="metric-row grid grid-cols-2 gap-2 md:flex md:flex-nowrap md:justify-evenly md:gap-4 flex-1 text-gray-900">
           {[
             {
               label: "Active Users Last 365 Days",
@@ -140,7 +140,7 @@ export default function BrandDashboard({
         <div className="flex w-fit">
           <div
             onClick={() => window.location.href = "/"}
-            className="cmg-logo relative h-12 w-20 md:h-24 md:w-32 cursor-pointer hidden md:block"
+            className="cmg-logo cmg-corner relative h-12 w-20 md:h-24 md:w-32 cursor-pointer hidden md:block"
             title="Home"
           >
             <Image

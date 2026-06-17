@@ -45,14 +45,32 @@ body {
    for the video and Top-10 news. Tall screens (desktop/TV, portrait) unaffected.
    !important overrides the components' Tailwind md: sizes and the odometers'
    inline font-size on these viewports only. */
-@media (orientation: landscape) and (max-height: 600px) {
+/* Landscape phones. Keyed on width (the long edge, ~667-932px on phones) rather
+   than height: viewport height in landscape varies by browser (Chrome's toolbar
+   vs Safari), so a height threshold missed Chrome. Width is stable across both.
+   Excludes tablets (>=1024px) and desktop. */
+@media (orientation: landscape) and (max-width: 950px) {
   .brand-header {
+    flex-direction: row !important;
+    align-items: center !important;
     padding-top: 0.125rem !important;
     padding-bottom: 0.125rem !important;
     gap: 0.375rem !important;
   }
   .brand-header .brand-logo { height: 1.5rem !important; width: 5rem !important; }
   .brand-header .cmg-logo { height: 1.5rem !important; width: 3rem !important; }
+  /* The md: breakpoint doesn't apply on a sub-768px landscape phone, so replicate
+     the desktop header here: row layout, metrics in a single row (not a 2x2 grid),
+     and the corner CMG logo shown while the inline mobile toggle is hidden. */
+  .brand-header .brand-left { width: auto !important; }
+  .brand-header .metric-row {
+    display: flex !important;
+    flex-wrap: nowrap !important;
+    justify-content: space-evenly !important;
+    gap: 0.5rem !important;
+  }
+  .brand-header .cmg-mobile { display: none !important; }
+  .brand-header .cmg-corner { display: block !important; }
   .brand-header .metric-col p { font-size: 8px !important; line-height: 1.1 !important; }
   .brand-header .metric-col > div { font-size: 13px !important; }
 
@@ -82,9 +100,23 @@ body {
      all three (Opens / Closes / Presentation) fit the landscape column. */
   .brand-news .award-countdown { gap: 0.25rem !important; font-size: 0.72rem !important; line-height: 1.15 !important; }
   .brand-news .award-countdown > div { gap: 0.3rem !important; }
-  .brand-news .award-countdown .award-logo { width: 12rem !important; height: 12rem !important; }
+  /* Size to the visible viewport height (dvh) with a cap, so the logo is large on
+     Safari (taller landscape area) but shrinks to fit Chrome's shorter area instead
+     of pushing the countdowns out of view. */
+  .brand-news .award-countdown .award-logo { width: min(10rem, 32dvh) !important; height: min(10rem, 32dvh) !important; }
   .brand-news .award-countdown p { font-size: 0.6rem !important; line-height: 1.1 !important; margin: 0 !important; }
   /* Keep the countdowns stacked vertically; tightened gaps + the auto-scrolling
      column (.brand-news) keep all three reachable on a short screen. */
   .brand-news .award-times { gap: 0.4rem !important; }
+
+  /* Shorts on landscape phones: shrink the title and reserve only a sliver for
+     it so the 9:16 video claims as much of the short, wide area as possible. The
+     title stays above the (static) ticker. */
+  .shorts-box { max-height: calc(100% - 1.25rem) !important; }
+  .shorts-title {
+    font-size: 10px !important;
+    line-height: 1.1 !important;
+    margin-top: 2px !important;
+    -webkit-line-clamp: 1 !important;
+  }
 }

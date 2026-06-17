@@ -111,8 +111,10 @@ export default function VideoRotator({
     if (titleBox.current) {
       titleBox.current.style.opacity = "0";
       setTimeout(() => {
-        titleBox.current!.textContent = current.title;
-        titleBox.current!.style.opacity = "1";
+        // The component may have unmounted (e.g. page rotation) during the delay.
+        if (!titleBox.current) return;
+        titleBox.current.textContent = current.title;
+        titleBox.current.style.opacity = "1";
       }, 200);
     }
 

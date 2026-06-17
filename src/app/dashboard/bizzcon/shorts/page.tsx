@@ -8,7 +8,7 @@ import WaitModeToggle from "@/src/components/WaitModeToggle";
 
 export default function BizzconShortsPage() {
   return (
-    <div className="h-screen flex flex-col bg-white overflow-hidden">
+    <div className="h-[100dvh] flex flex-col bg-white overflow-hidden">
       <div className="flex-1 min-h-0">
         <ShortsPlayer
           className="h-full"

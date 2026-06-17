@@ -85,15 +85,15 @@ export default function EditorialVideosTicker({
   if (!exclusiveFeeds.length && !newsFeeds.length) return null;
 
   return (
-    <footer className="fixed bottom-0 left-0 z-50 w-full md:static">
+    <footer className="w-full">
       <div className="flex flex-col md:space-y-0 gap-0" style={{ boxShadow: "0 -6px 20px rgba(0,0,0,0.25)" }}>
         {exclusiveFeeds.length > 0 && (
           <div className="flex-1 min-w-0">
             <TickerCard
               feedUrl={exclusiveFeeds}
               duration={4000}
-              fontSize="clamp(28px, 2.8vw, 52px)"
-              height="clamp(85px, 7.5vh, 104px)"
+              fontSize="clamp(15px, 2.8vw, 52px)"
+              height="clamp(40px, 7.5vh, 104px)"
             />
           </div>
         )}
@@ -102,8 +102,8 @@ export default function EditorialVideosTicker({
             <TickerStrip
               feedUrl={newsFeeds}
               speed={60}
-              fontSize="clamp(28px, 2.8vw, 52px)"
-              height="clamp(85px, 7.5vh, 104px)"
+              fontSize="clamp(15px, 2.8vw, 52px)"
+              height="clamp(40px, 7.5vh, 104px)"
             />
           </div>
         )}

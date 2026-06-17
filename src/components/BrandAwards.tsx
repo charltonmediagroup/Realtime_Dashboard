@@ -80,7 +80,7 @@ export default function AwardsDashboard({
           {/* Mobile CMG toggle */}
           <div
             onClick={toggleFullscreen}
-            className="cmg-logo relative h-12 w-20 cursor-pointer md:hidden"
+            className="cmg-logo cmg-mobile relative h-12 w-20 cursor-pointer md:hidden"
             title="Toggle fullscreen"
           >
             <Image
@@ -94,7 +94,7 @@ export default function AwardsDashboard({
         </div>
 
         {/* Right block – desktop CMG toggle */}
-        <div className="hidden md:flex">
+        <div className="cmg-corner hidden md:flex">
           <div
             onClick={toggleFullscreen}
             className="cmg-logo relative h-24 w-32 cursor-pointer"
