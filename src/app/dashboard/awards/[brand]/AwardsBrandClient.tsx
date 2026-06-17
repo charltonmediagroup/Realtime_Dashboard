@@ -43,13 +43,11 @@ export default function AwardsBrandClient({ brand }: BrandPageProps) {
   const [awardsConfig, setAwardsConfig] = useState<AwardsConfigEntry[] | null>(null);
   const [showSettings, setShowSettings] = useState(false);
 
-  const baseUrl =
-    process.env.JSON_PROVIDER_URL || process.env.NEXT_PUBLIC_SITE_URL;
+  // Same-origin relative base — see BrandClient; avoids hydration mismatch.
+  const baseUrl = "";
 
   /* ---------------- FETCH BRAND CONFIG ---------------- */
   useEffect(() => {
-    if (!baseUrl) return;
-
     const fetchBrandConfig = async () => {
       try {
         const res = await fetch(
@@ -77,8 +75,6 @@ export default function AwardsBrandClient({ brand }: BrandPageProps) {
 
     /* ---------------- FETCH BRAND CONFIG ---------------- */
   useEffect(() => {
-    if (!baseUrl) return;
-
     const fetchAwardConfig = async () => {
       try {
         const res = await fetch(

@@ -39,3 +39,52 @@ body {
   .landscape-show { display: flex !important; }
   .landscape-hide { display: none !important; }
 }
+
+/* Compact the brand-dashboard header on short landscape screens (phones), so the
+   logo and active-user counts stop overflowing/overlapping and leave more room
+   for the video and Top-10 news. Tall screens (desktop/TV, portrait) unaffected.
+   !important overrides the components' Tailwind md: sizes and the odometers'
+   inline font-size on these viewports only. */
+@media (orientation: landscape) and (max-height: 600px) {
+  .brand-header {
+    padding-top: 0.125rem !important;
+    padding-bottom: 0.125rem !important;
+    gap: 0.375rem !important;
+  }
+  .brand-header .brand-logo { height: 1.5rem !important; width: 5rem !important; }
+  .brand-header .cmg-logo { height: 1.5rem !important; width: 3rem !important; }
+  .brand-header .metric-col p { font-size: 8px !important; line-height: 1.1 !important; }
+  .brand-header .metric-col > div { font-size: 13px !important; }
+
+  /* Fit the whole dashboard on one landscape screen (no scrolling): lock to the
+     viewport height and place the news beside the video instead of stacked. */
+  .brand-root { height: 100dvh !important; min-height: 0 !important; overflow: hidden !important; }
+  .brand-main {
+    flex: 1 1 auto !important;
+    min-height: 0 !important;
+    overflow: hidden !important;
+    padding-top: 0.25rem !important;
+    padding-bottom: 0.25rem !important;
+    gap: 0.5rem !important;
+  }
+  .brand-content {
+    flex-direction: row !important;
+    height: 100% !important;
+    min-height: 0 !important;
+    gap: 0.5rem !important;
+    padding-left: 0.5rem !important;
+    padding-right: 0.5rem !important;
+  }
+  .brand-news { width: 40% !important; height: 100% !important; overflow-x: hidden !important; overflow-y: auto !important; }
+  .brand-video { width: 60% !important; height: 100% !important; overflow: hidden !important; }
+
+  /* Awards view: shrink the award logo and tighten the nomination countdowns so
+     all three (Opens / Closes / Presentation) fit the landscape column. */
+  .brand-news .award-countdown { gap: 0.25rem !important; font-size: 0.72rem !important; line-height: 1.15 !important; }
+  .brand-news .award-countdown > div { gap: 0.3rem !important; }
+  .brand-news .award-countdown .award-logo { width: 12rem !important; height: 12rem !important; }
+  .brand-news .award-countdown p { font-size: 0.6rem !important; line-height: 1.1 !important; margin: 0 !important; }
+  /* Keep the countdowns stacked vertically; tightened gaps + the auto-scrolling
+     column (.brand-news) keep all three reachable on a short screen. */
+  .brand-news .award-times { gap: 0.4rem !important; }
+}

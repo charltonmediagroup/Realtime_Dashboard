@@ -41,7 +41,7 @@ export default function EditorialVideosTicker({
   const [configs, setConfigs] = useState<BrandConfigs>({});
 
   useEffect(() => {
-    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "";
+    const baseUrl = "";
     const url = `${baseUrl}/api/json-provider/dashboard-config/brand-all-properties?filter[editorial]=true`;
     const delays = [0, 800, 2000, 4000];
     let cancelled = false;

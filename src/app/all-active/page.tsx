@@ -36,7 +36,7 @@ interface GroupInfo {
 const BRAND_PROPERTIES: BrandProperties = BRAND_PROPERTIES_RAW;
 const GROUPS: Record<string, GroupInfo> = GROUPS_RAW;
 
-const API_BASE = process.env.NEXT_PUBLIC_SITE_URL ?? "";
+const API_BASE = "";
 const DEFAULT_IMAGE = "logo/cmg.png"; // fallback image
 
 // -------------------- Helpers --------------------

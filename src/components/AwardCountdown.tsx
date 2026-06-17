@@ -55,7 +55,7 @@ const upcomingAwards = awards.filter(
   if (!upcomingAwards.length) return null;
   
   return (
-    <div className="flex-col md:flex-row gap-4 justify-center h-full text-lg text-gray-900">
+    <div className="award-countdown flex-col md:flex-row gap-4 justify-center h-full text-lg text-gray-900">
 
       {upcomingAwards.map((award, idx) => (
         <div key={award.id || award.view_node || idx} className="text-left flex flex-col gap-4">
@@ -66,37 +66,40 @@ const upcomingAwards = awards.filter(
               <img
                 src={award.image}
                 alt={award.title}
-                className="w-50 h-50 object-contain"
+                className="award-logo w-50 h-50 object-contain"
               />
             )}
             {/* <p>{award.title}</p> */}
           </div>
 
-          {/* Nomination Opens */}
-          <div className="">
-            <p className="text-sm text-gray-700">Nomination Opens</p>
-            <Countdown
-              target={award.startDate}
-              done="Nomination Opened"
-            />
-          </div>
+          {/* Nomination countdowns (stacked on desktop, row on landscape phones) */}
+          <div className="award-times flex flex-col gap-4">
+            {/* Nomination Opens */}
+            <div className="">
+              <p className="text-sm text-gray-700">Nomination Opens</p>
+              <Countdown
+                target={award.startDate}
+                done="Nomination Opened"
+              />
+            </div>
 
-          {/* Nomination Closes */}
-          <div className="">
-            <p className="text-sm text-gray-700">Nomination Closes</p>
-            <Countdown
-              target={award.endDate}
-              done="Nomination Closed"
-            />
-          </div>
+            {/* Nomination Closes */}
+            <div className="">
+              <p className="text-sm text-gray-700">Nomination Closes</p>
+              <Countdown
+                target={award.endDate}
+                done="Nomination Closed"
+              />
+            </div>
 
-          {/* Awards Presentation */}
-          <div className="">
-            <p className="text-sm text-gray-700">Awards Presentation</p>
-            <Countdown
-              target={award.field_date}
-              done="Awards Finished"
-            />
+            {/* Awards Presentation */}
+            <div className="">
+              <p className="text-sm text-gray-700">Awards Presentation</p>
+              <Countdown
+                target={award.field_date}
+                done="Awards Finished"
+              />
+            </div>
           </div>
 
         </div>

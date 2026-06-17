@@ -41,8 +41,9 @@ export default function BrandPageClient({ brand }: BrandPageProps) {
 
   const rotationTimer = useRef<NodeJS.Timeout | null>(null);
 
-  const baseUrl =
-    process.env.JSON_PROVIDER_URL || process.env.NEXT_PUBLIC_SITE_URL;
+  // Same-origin relative base — correct on desktop, LAN/mobile, and prod, with
+  // no server/client branch that could trigger a hydration mismatch.
+  const baseUrl = "";
 
   /* ---------------- COMPONENT LIST ---------------- */
 
@@ -82,8 +83,6 @@ export default function BrandPageClient({ brand }: BrandPageProps) {
   /* ---------------- FETCH CONFIG ---------------- */
 
   useEffect(() => {
-    if (!baseUrl) return;
-
     fetch(
       `${baseUrl}/api/json-provider/dashboard-config/brand-all-properties/${brand}`,
       { cache: "no-store" }
@@ -96,8 +95,6 @@ export default function BrandPageClient({ brand }: BrandPageProps) {
   /* ---------------- FETCH AWARDS CONFIG ---------------- */
 
   useEffect(() => {
-    if (!baseUrl) return;
-
     fetch(
       `${baseUrl}/api/awards/${brand}`,
       { cache: "no-store" }
@@ -143,6 +140,27 @@ export default function BrandPageClient({ brand }: BrandPageProps) {
     );
   };
 
+  /* ---------------- SWIPE NAV (mobile) ---------------- */
+
+  const touchStart = useRef<{ x: number; y: number } | null>(null);
+
+  const onTouchStart = (e: React.TouchEvent) => {
+    const t = e.touches[0];
+    touchStart.current = { x: t.clientX, y: t.clientY };
+  };
+
+  const onTouchEnd = (e: React.TouchEvent) => {
+    if (!touchStart.current) return;
+    const t = e.changedTouches[0];
+    const dx = t.clientX - touchStart.current.x;
+    const dy = t.clientY - touchStart.current.y;
+    touchStart.current = null;
+    // Require a clearly horizontal swipe to avoid hijacking vertical scrolls.
+    if (Math.abs(dx) < 60 || Math.abs(dx) < Math.abs(dy)) return;
+    if (dx < 0) nextComponent();
+    else prevComponent();
+  };
+
   /* ---------------- SETTINGS SAVE ---------------- */
 
   const handleSettingsSave = (params: Record<string, string>) => {
@@ -160,7 +178,11 @@ export default function BrandPageClient({ brand }: BrandPageProps) {
     );
 
   return (
-    <div className="flex flex-col w-screen min-h-screen overflow-hidden">
+    <div
+      className="flex flex-col w-screen min-h-screen overflow-hidden"
+      onTouchStart={onTouchStart}
+      onTouchEnd={onTouchEnd}
+    >
       {/* ---------------- CURRENT COMPONENT ---------------- */}
 
       {components[componentIndex]}

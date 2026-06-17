@@ -21,13 +21,11 @@ export default function EditorialBrandClient({ brand }: BrandPageProps) {
   const [siteConfig, setSiteConfig] = useState<any | null>(null);
   const [showSettings, setShowSettings] = useState(false);
 
-  const baseUrl =
-    process.env.JSON_PROVIDER_URL || process.env.NEXT_PUBLIC_SITE_URL;
+  // Same-origin relative base — see BrandClient; avoids hydration mismatch.
+  const baseUrl = "";
 
   /* ---------------- FETCH BRAND CONFIG ---------------- */
   useEffect(() => {
-    if (!baseUrl) return;
-
     const fetchBrandConfig = async () => {
       try {
         const res = await fetch(

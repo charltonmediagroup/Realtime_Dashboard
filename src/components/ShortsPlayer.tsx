@@ -30,8 +30,19 @@ export default function ShortsPlayer({
     Array.from({ length: SLOTS }, (_, i) => i),
   );
   const [waitMode, setWaitMode] = useState(false);
+  // Phones can't fit two 9:16 players side by side, so collapse to a single
+  // slot on narrow screens. Starts at SLOTS to match SSR, then adjusts client-side.
+  const [cols, setCols] = useState(SLOTS);
   const iframeRefs = useRef<(HTMLIFrameElement | null)[]>([]);
   const timer = useRef<NodeJS.Timeout | null>(null);
+
+  useEffect(() => {
+    const mq = window.matchMedia("(max-width: 639px)");
+    const apply = () => setCols(mq.matches ? 1 : SLOTS);
+    apply();
+    mq.addEventListener("change", apply);
+    return () => mq.removeEventListener("change", apply);
+  }, [SLOTS]);
 
   // Fetch videos
   useEffect(() => {
@@ -70,16 +81,16 @@ export default function ShortsPlayer({
   useEffect(() => {
     if (timer.current) clearInterval(timer.current);
     if (waitMode) return;
-    if (videos.length <= SLOTS || rotationInterval <= 0) return;
+    if (videos.length <= cols || rotationInterval <= 0) return;
     timer.current = setInterval(() => {
       setSlotIndexes((prev) =>
-        prev.map((i) => (i + SLOTS) % videos.length),
+        prev.map((i) => (i + cols) % videos.length),
       );
     }, rotationInterval);
     return () => {
       if (timer.current) clearInterval(timer.current);
     };
-  }, [waitMode, videos.length, rotationInterval]);
+  }, [waitMode, videos.length, rotationInterval, cols]);
 
   // Wait mode: listen for Vimeo 'ended' postMessage, advance that slot only
   useEffect(() => {
@@ -109,7 +120,7 @@ export default function ShortsPlayer({
         setSlotIndexes((prev) => {
           const next = [...prev];
           const taken = new Set(next.filter((_, i) => i !== slotIdx));
-          let candidate = (next[slotIdx] + SLOTS) % videos.length;
+          let candidate = (next[slotIdx] + cols) % videos.length;
           // avoid duplicating a video already visible in another slot
           let guard = 0;
           while (taken.has(candidate) && guard++ < videos.length) {
@@ -127,7 +138,7 @@ export default function ShortsPlayer({
       clearTimeout(subTimer);
       window.removeEventListener("message", onMessage);
     };
-  }, [waitMode, videos.length, slotIndexes]);
+  }, [waitMode, videos.length, slotIndexes, cols]);
 
   if (loading) {
     return (
@@ -164,15 +175,15 @@ export default function ShortsPlayer({
 
   return (
     <div
-      className={`flex items-center justify-evenly px-6 py-16 ${className}`}
+      className={`flex items-center justify-evenly gap-4 px-4 py-8 sm:px-6 sm:py-16 ${className}`}
     >
-      {Array.from({ length: Math.min(SLOTS, videos.length) }).map((_, slot) => {
+      {Array.from({ length: Math.min(cols, videos.length) }).map((_, slot) => {
         const video = videos[slotIndexes[slot] % videos.length];
         if (!video) return null;
         const playerId = `short-${slot}`;
         return (
           <div key={slot} className="flex flex-col items-center">
-            <div className="relative h-[80vh] aspect-[9/16] overflow-hidden rounded-lg">
+            <div className="relative h-[68vh] sm:h-[80vh] aspect-[9/16] max-w-[92vw] overflow-hidden rounded-lg">
               <iframe
                 ref={(el) => {
                   iframeRefs.current[slot] = el;

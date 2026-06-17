@@ -1,25 +1,27 @@
 import Link from "next/link";
 
-const BRANDS = [
-  "sbr",
-  "hkb",
-  "abf",
-  "abr",
-  "ia",
-  "ra",
-  "ap",
-  "hca",
-  "qsr",
-  "qsr-asia",
-  "qsr-aus",
-  "qsr-uk",
+const PUBLICATIONS = [
+  { slug: "abf", name: "Asian Banking & Finance" },
+  { slug: "ap", name: "Asian Power" },
+  { slug: "hca", name: "Healthcare Asia" },
+  { slug: "hkb", name: "Hong Kong Business" },
+  { slug: "ia", name: "Insurance Asia" },
+  { slug: "ra", name: "Retail Asia" },
+  { slug: "sbr", name: "Singapore Business Review" },
+];
+
+const QSR_BRANDS = [
+  { slug: "qsr", name: "QSR Media" },
+  { slug: "qsr-asia", name: "QSR Media Asia" },
+  { slug: "qsr-aus", name: "QSR Media Australia" },
+  { slug: "qsr-uk", name: "QSR Media UK" },
 ];
 
 export default function Home() {
   return (
     <div className="bg-transparent min-h-screen flex items-start sm:items-center justify-center flex-col gap-6 px-4 py-10 text-lg">
       <h1 className="text-3xl font-bold">CMG GA4 Dashboard</h1>
-      <div className="flex flex-col md:flex-row gap-10 md:gap-16">
+      <div className="flex flex-col md:flex-row gap-10 md:gap-16 [&_a]:block [&_a]:py-1">
         <div className="flex flex-col gap-2">
           <Link href="/dashboard/editorial" className="hover:underline font-semibold">
             Editorial Dashboard
@@ -74,40 +76,26 @@ export default function Home() {
           </Link>
         </div>
 
-        <div className="flex flex-col gap-1">
-          <Link href="/dashboard/sbr" className="hover:underline">
-            SBR
-          </Link>
-          <Link href="/dashboard/hkb" className="hover:underline">
-            HKB
-          </Link>
-          <Link href="/dashboard/abf" className="hover:underline">
-            ABF
-          </Link>
-          <Link href="/dashboard/ia" className="hover:underline">
-            IA
-          </Link>
-          <Link href="/dashboard/ra" className="hover:underline">
-            RA
-          </Link>
-          <Link href="/dashboard/ap" className="hover:underline">
-            AP
-          </Link>
-          <Link href="/dashboard/hca" className="hover:underline">
-            HCA
-          </Link>
-          <Link href="/dashboard/qsr" className="hover:underline">
-            QSR
-          </Link>
-          <Link href="/dashboard/qsr-asia" className="hover:underline">
-            QSR ASIA
-          </Link>
-          <Link href="/dashboard/qsr-aus" className="hover:underline">
-            QSR AUS
-          </Link>
-          <Link href="/dashboard/qsr-uk" className="hover:underline">
-            QSR UK
-          </Link>
+        <div className="flex flex-col gap-2">
+          <span className="font-semibold">Publications</span>
+          {PUBLICATIONS.map((b) => (
+            <Link
+              key={b.slug}
+              href={`/dashboard/${b.slug}`}
+              className="hover:underline ml-8"
+            >
+              {b.name}
+            </Link>
+          ))}
+          {QSR_BRANDS.map((b) => (
+            <Link
+              key={b.slug}
+              href={`/dashboard/${b.slug}`}
+              className="hover:underline ml-8"
+            >
+              {b.name}
+            </Link>
+          ))}
         </div>
       </div>
 

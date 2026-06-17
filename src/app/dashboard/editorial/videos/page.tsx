@@ -66,7 +66,7 @@ export default function EditorialVideosPage() {
   useEffect(() => {
     const fetchBrands = async () => {
       try {
-        const baseUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "";
+        const baseUrl = "";
         const res = await fetch(
           `${baseUrl}/api/json-provider/dashboard-config/brand-all-properties?filter[editorial]=true`,
           { cache: "force-cache" }
