@@ -382,7 +382,7 @@ export default async function EditorialLeaderboardPage({
 
   return (
     <div className="min-h-screen max-w-screen overflow-auto bg-white text-gray-900">
-      {(rosterError || rosterCount > 0 || brandErrors.length > 0 || brandSource === "fallback") && (
+      {(rosterError || brandErrors.length > 0 || brandSource === "fallback") && (
         <AutoHideBanner>
           {brandSource === "fallback" && (
             <div className="bg-amber-50 border-b border-amber-200 text-amber-900 text-xs px-4 py-2">
@@ -395,11 +395,6 @@ export default async function EditorialLeaderboardPage({
               Editorial roster unavailable — {rosterError}. Leaderboard will be empty until
               the <code className="font-mono">dashboard-config / editorial-roster</code> doc is fixed.
               Re-seed via <code className="font-mono">npx tsx scripts/seed-editorial-roster.mjs</code>.
-            </div>
-          )}
-          {!rosterError && rosterCount > 0 && (
-            <div className="bg-emerald-50 border-b border-emerald-200 text-emerald-900 text-xs px-4 py-2">
-              Filtering to {rosterCount} editorial team members from the DB roster.
             </div>
           )}
           {brandErrors.length > 0 && (

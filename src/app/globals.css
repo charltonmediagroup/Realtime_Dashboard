@@ -40,6 +40,33 @@ body {
   .landscape-hide { display: none !important; }
 }
 
+/* Shrink the DashboardControls overlay on short landscape screens (phones) so all
+   its buttons fit and the panel sits near the bottom — otherwise the wrapped rows
+   push controls (like the Show-N selector) off the top of the screen. */
+@media (orientation: landscape) and (max-height: 600px) {
+  .dash-controls {
+    bottom: 6rem !important;
+    gap: 0.4rem !important;
+    padding: 0.35rem 0.7rem !important;
+    max-width: 97vw !important;
+  }
+  .dash-controls button,
+  .dash-controls select,
+  .dash-controls a {
+    padding: 0.35rem 0.8rem !important;
+    font-size: 0.92rem !important;
+    line-height: 1.3 !important;
+    border-radius: 0.5rem !important;
+  }
+  /* Trim the full table's vertical cell padding so short landscape rows give
+     their content more room (the name + tags were clipping at Show 5). */
+  .lb-table td,
+  .lb-table th {
+    padding-top: 2px !important;
+    padding-bottom: 2px !important;
+  }
+}
+
 /* Compact the brand-dashboard header on short landscape screens (phones), so the
    logo and active-user counts stop overflowing/overlapping and leave more room
    for the video and Top-10 news. Tall screens (desktop/TV, portrait) unaffected.
