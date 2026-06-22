@@ -53,6 +53,39 @@ export default function BrandDashboard({
     if (!videosFeedUrl) setShowVideoRotator(false);
   }, [articlesFeedUrl, videosFeedUrl]);
 
+  // Publish the REAL visible height as --brand-h. The landscape CSS sizes the
+  // shell + root to this instead of 100dvh, which on iOS does NOT report the
+  // toolbar-aware height (so the page ran taller than the screen → scrolled, and
+  // the scrolled load clipped the header). visualViewport.height is the true
+  // visible height on iOS. No scroll-lock / fixed positioning here — once the
+  // document equals the visible area it can't scroll and the browser keeps its
+  // toolbar behaviour, so the header isn't clipped. (Var is only consumed by the
+  // landscape ≤950 CSS; desktop/TV and portrait are unaffected.)
+  useEffect(() => {
+    const vv = window.visualViewport;
+    const setVar = () => {
+      const h = Math.round(vv?.height ?? window.innerHeight);
+      document.documentElement.style.setProperty("--brand-h", `${h}px`);
+    };
+    setVar();
+    const raf = requestAnimationFrame(setVar);
+    const t1 = setTimeout(setVar, 300);
+    const t2 = setTimeout(setVar, 800);
+    window.addEventListener("resize", setVar);
+    window.addEventListener("orientationchange", setVar);
+    vv?.addEventListener("resize", setVar);
+    vv?.addEventListener("scroll", setVar);
+    return () => {
+      cancelAnimationFrame(raf);
+      clearTimeout(t1);
+      clearTimeout(t2);
+      window.removeEventListener("resize", setVar);
+      window.removeEventListener("orientationchange", setVar);
+      vv?.removeEventListener("resize", setVar);
+      vv?.removeEventListener("scroll", setVar);
+    };
+  }, []);
+
   const toggleFullscreen = () => {
     const el = document.documentElement;
     if (!document.fullscreenElement) {

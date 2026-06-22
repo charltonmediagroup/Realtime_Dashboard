@@ -92,7 +92,7 @@ export default function EditorialBrandClient({ brand }: BrandPageProps) {
   }
 
   return (
-    <div className="flex flex-col w-screen min-h-screen overflow-hidden">
+    <div className="brand-shell flex flex-col w-screen min-h-screen overflow-hidden">
       <BrandDashboard
         key={searchParams.toString()} // force re-render on param change
         brand={brand}

@@ -179,7 +179,7 @@ export default function BrandPageClient({ brand }: BrandPageProps) {
 
   return (
     <div
-      className="flex flex-col w-screen min-h-screen overflow-hidden"
+      className="brand-shell flex flex-col w-screen min-h-screen overflow-hidden"
       onTouchStart={onTouchStart}
       onTouchEnd={onTouchEnd}
     >

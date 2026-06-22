@@ -113,7 +113,11 @@ body {
 
   /* Fit the whole dashboard on one landscape screen (no scrolling): lock to the
      viewport height and place the news beside the video instead of stacked. */
-  .brand-root { height: 100dvh !important; min-height: 0 !important; overflow: hidden !important; }
+  /* Fit-to-screen in landscape: the shell + root both track the dynamic viewport
+     (dvh) so the document never exceeds the visible area and nothing scrolls —
+     while letting the browser manage its toolbar normally (no lock, no clip). */
+  .brand-shell { height: var(--brand-h, 100dvh) !important; min-height: 0 !important; overflow: hidden !important; }
+  .brand-root { height: var(--brand-h, 100dvh) !important; min-height: 0 !important; overflow: hidden !important; }
   .brand-main {
     flex: 1 1 auto !important;
     min-height: 0 !important;
