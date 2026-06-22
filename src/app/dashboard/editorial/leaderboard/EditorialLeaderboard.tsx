@@ -263,6 +263,19 @@ export default function EditorialLeaderboard({
   // overflow, so a journalist with many brand chips or tall stories can't grow
   // the row past its height and shove the bottom (total) row off-screen.
   const rowInnerMaxH = `calc(${journalistRowVh}dvh - ${isLandscapePhone ? "0.35rem" : "1rem"})`;
+  // Desktop/TV: the table is `h-full`, so the browser stretches each row taller
+  // than its `journalistRowVh` hint (which is based on 78dvh) to fill 100dvh. A
+  // maxHeight cap built from that smaller hint therefore clips content that
+  // actually fits the rendered row — and the clip gets worse when the window
+  // isn't fullscreen (shorter viewport → fewer px per dvh, while the vw-driven
+  // fonts don't shrink as fast). So on desktop we clip to the *real* cell: an
+  // absolutely-positioned inner div fills the rendered row exactly. Landscape
+  // phone keeps the tuned dvh cap (its rows don't stretch the same way).
+  const clipToRenderedRow = !isLandscapePhone;
+  const cellInnerClass = clipToRenderedRow
+    ? "absolute inset-0 px-3 py-2 flex flex-col justify-center gap-1 overflow-hidden"
+    : "flex flex-col gap-1 overflow-hidden";
+  const cellInnerStyle = clipToRenderedRow ? undefined : { maxHeight: rowInnerMaxH };
   // On a landscape phone, cap the name/story/chip fonts much smaller (and allow
   // a lower floor) so tags + stories stay compact and never clip — even on the
   // taller rows of Show 3. Desktop/TV keep their original ceilings.
@@ -384,7 +397,7 @@ export default function EditorialLeaderboard({
                   >
                     {a ? `#${rank}` : ""}
                   </td>
-                  <td className="px-3 py-2 align-middle">
+                  <td className="px-3 py-2 align-middle relative">
                     {a && (() => {
                       const chipsContent = (
                         <>
@@ -430,7 +443,7 @@ export default function EditorialLeaderboard({
                         </>
                       );
                       return (
-                        <div className="flex flex-col gap-1 overflow-hidden" style={{ maxHeight: rowInnerMaxH }}>
+                        <div className={cellInnerClass} style={cellInnerStyle}>
                           <span
                             className="font-semibold leading-tight uppercase flex flex-wrap items-baseline gap-x-2 gap-y-0.5"
                             style={{ color: "#111827", letterSpacing: "0.04em" }}
@@ -452,9 +465,9 @@ export default function EditorialLeaderboard({
                       );
                     })()}
                   </td>
-                  <td className="px-3 py-2 align-middle">
+                  <td className="px-3 py-2 align-middle relative">
                     {a && (
-                      <div className="flex flex-col gap-1 overflow-hidden" style={{ maxHeight: rowInnerMaxH }}>
+                      <div className={cellInnerClass} style={cellInnerStyle}>
                         {stories.map((s) => (
                           <div
                             key={`${s.brand}-${s.nid}`}

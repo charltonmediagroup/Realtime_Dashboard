@@ -41,6 +41,8 @@ export default function SponsorshipLeaderboard() {
   const [data, setData] = useState<Payload | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [pageIndex, setPageIndex] = useState(0);
+  const [rotationMs, setRotationMs] = useState(15_000);
   const cancelledRef = useRef(false);
 
   const load = useCallback(async () => {
@@ -67,6 +69,64 @@ export default function SponsorshipLeaderboard() {
     return () => { cancelledRef.current = true; clearInterval(id); };
   }, [load]);
 
+  // Any phone (portrait OR landscape). On phones we pin the root to the real
+  // visible height and lock document scroll — otherwise `100dvh` resolves to the
+  // toolbar-collapsed (taller) height in Safari/Chrome, so when the toolbar is
+  // shown the layout runs taller than the visible area: the bottom (Total) clips
+  // behind the toolbar and the whole page becomes scrollable. Tablets/desktop/TV
+  // are excluded and keep the 100dvh fit-to-screen layout.
+  const [isPhone, setIsPhone] = useState(false);
+  useEffect(() => {
+    const mq = window.matchMedia("(max-width: 767px), (max-height: 600px)");
+    const apply = () => setIsPhone(mq.matches);
+    apply();
+    mq.addEventListener("change", apply);
+    return () => mq.removeEventListener("change", apply);
+  }, []);
+  // visualViewport.height is the actual visible area (toolbar-aware) in BOTH
+  // Safari and Chrome; innerHeight can report the toolbar-collapsed (larger)
+  // height. Re-measure on the next frame + after a tick so we pick up the settled
+  // value on a fresh navigation.
+  const [viewportH, setViewportH] = useState<number | null>(null);
+  useEffect(() => {
+    const vv = window.visualViewport;
+    const apply = () => setViewportH(Math.round(vv?.height ?? window.innerHeight));
+    apply();
+    const raf = requestAnimationFrame(apply);
+    const t = setTimeout(apply, 300);
+    window.addEventListener("resize", apply);
+    window.addEventListener("orientationchange", apply);
+    vv?.addEventListener("resize", apply);
+    vv?.addEventListener("scroll", apply);
+    return () => {
+      cancelAnimationFrame(raf);
+      clearTimeout(t);
+      window.removeEventListener("resize", apply);
+      window.removeEventListener("orientationchange", apply);
+      vv?.removeEventListener("resize", apply);
+      vv?.removeEventListener("scroll", apply);
+    };
+  }, []);
+  // Lock document scroll on phones so only the inner table scrolls (the root is
+  // pinned to the visible height); otherwise the page itself can be dragged and
+  // the bottom row hides behind the toolbar.
+  useEffect(() => {
+    if (!isPhone) return;
+    window.scrollTo(0, 0);
+    const html = document.documentElement;
+    const { overflow: prevHtml } = html.style;
+    const { overflow: prevBody, overscrollBehavior: prevOverscroll } =
+      document.body.style;
+    html.style.overflow = "hidden";
+    document.body.style.overflow = "hidden";
+    document.body.style.overscrollBehavior = "none";
+    return () => {
+      html.style.overflow = prevHtml;
+      document.body.style.overflow = prevBody;
+      document.body.style.overscrollBehavior = prevOverscroll;
+    };
+  }, [isPhone]);
+
   const ranked = useMemo(() => {
     if (!data) return [];
     return data.salespeople
@@ -84,6 +144,17 @@ export default function SponsorshipLeaderboard() {
     return Object.values(data.quarterTotals).reduce((a, b) => a + b, 0);
   }, [data]);
 
+  // Max 10 people per page; show only the real rows (no empty padding). With 10
+  // or fewer there's a single page; beyond that it paginates and auto-rotates
+  // like the other leaderboards.
+  const PAGE_SIZE = 10;
+  const totalPages = Math.max(1, Math.ceil(ranked.length / PAGE_SIZE));
+  useEffect(() => {
+    if (totalPages <= 1 || rotationMs <= 0) return;
+    const id = setInterval(() => setPageIndex((p) => (p + 1) % totalPages), rotationMs);
+    return () => clearInterval(id);
+  }, [totalPages, rotationMs]);
+
   if (error && !data) {
     return (
       <div className="flex items-center justify-center h-screen text-red-400 text-center px-6" style={{ backgroundColor: "#2a2a2a" }}>
@@ -100,7 +171,9 @@ export default function SponsorshipLeaderboard() {
     );
   }
 
-  const rowCount = Math.max(ranked.length + 1, 1);
+  const currentPage = Math.min(pageIndex, totalPages - 1);
+  const displayed = ranked.slice(currentPage * PAGE_SIZE, (currentPage + 1) * PAGE_SIZE);
+  const rowCount = Math.max(displayed.length + 1, 1);
   const effectiveCount = Math.min(rowCount, 12);
   // Dynamic row height: distribute available viewport height across data + total rows
   const rowHeightVh = 82 / rowCount;
@@ -109,11 +182,26 @@ export default function SponsorshipLeaderboard() {
   const headerSize = `clamp(0.7rem, min(calc(0.5vw + ${5 / effectiveCount}vw), ${rowHeightVh * 0.35}vh), 2.8rem)`;
   const mFontSize = `clamp(0.8rem, min(calc(1.2vw + ${9.5 / effectiveCount}vw), ${rowHeightVh * 0.5}vh), 4.5rem)`;
   const mHeaderSize = `clamp(0.65rem, min(calc(0.8vw + ${6 / effectiveCount}vw), ${rowHeightVh * 0.35}vh), 2.8rem)`;
+  // Phone (landscape uses this desktop table): size rows to the REAL visible
+  // height. `vh` resolves to Safari's toolbar-hidden (taller) viewport, so with
+  // the toolbar shown the vh rows overran the pinned visible height and the Total
+  // clipped. 0.82 leaves room for the header. Desktop/TV keep the vh sizing.
+  const phoneRowPx =
+    isPhone && viewportH != null
+      ? Math.max(1, Math.round((viewportH * 0.82) / rowCount))
+      : null;
+  const tblRowH = phoneRowPx != null ? `${phoneRowPx}px` : `${rowHeightVh}vh`;
+  const tblRowMin = phoneRowPx != null ? `${phoneRowPx}px` : "40px";
 
   return (
     <div
-      className="flex flex-col justify-center h-screen px-0 md:px-4 overflow-hidden"
-      style={{ backgroundColor: "#2a2a2a" }}
+      className={`flex flex-col px-0 md:px-4 overflow-hidden ${
+        isPhone ? "justify-start" : "justify-center"
+      } ${isPhone && viewportH != null ? "fixed inset-x-0 top-0" : "h-[100dvh]"}`}
+      style={{
+        backgroundColor: "#2a2a2a",
+        ...(isPhone && viewportH != null ? { height: viewportH } : {}),
+      }}
     >
       {/* ---- DESKTOP TABLE ---- */}
       <div className="hidden md:flex landscape-show flex-col flex-1 min-h-0">
@@ -128,16 +216,16 @@ export default function SponsorshipLeaderboard() {
             <tr><td colSpan={4} style={{ padding: 0, height: "2px", background: "linear-gradient(90deg, #d4a853, transparent)" }} /></tr>
           </thead>
           <tbody>
-            {ranked.map((row, idx) => {
-              const rank = idx + 1;
+            {displayed.map((row, idx) => {
+              const rank = currentPage * PAGE_SIZE + idx + 1;
               const color = rankColor(rank);
               return (
                 <tr
                   key={row.name}
                   className="text-center uppercase"
                   style={{
-                    height: `${rowHeightVh}vh`,
-                    minHeight: "40px",
+                    height: tblRowH,
+                    minHeight: tblRowMin,
                     background: idx % 2 === 0 ? "linear-gradient(90deg, #4A4A4A, #505050)" : "linear-gradient(90deg, #73787C, #7A7F83)",
                     color: "#ffffff",
                     borderBottom: "0.5px solid #222",
@@ -161,8 +249,8 @@ export default function SponsorshipLeaderboard() {
             <tr
               className="text-center uppercase"
               style={{
-                height: `${rowHeightVh}vh`,
-                minHeight: "40px",
+                height: tblRowH,
+                minHeight: tblRowMin,
                 background: "linear-gradient(90deg, #2a2a2a, #3a3020)",
                 borderTop: "2px solid rgba(212, 168, 83, 0.6)",
                 color: "#f0c668",
@@ -185,20 +273,23 @@ export default function SponsorshipLeaderboard() {
       </div>
 
       {/* ---- MOBILE TABLE ---- */}
-      <div className="flex md:hidden landscape-hide flex-col flex-1 min-h-0">
+      {/* Scrollable on phones: with many salespeople the rows hit their 40px floor
+          and overflow the viewport, so let this column scroll instead of clipping
+          the bottom rows. Desktop/TV keeps the fit-to-screen layout. */}
+      <div className="flex md:hidden landscape-hide flex-col flex-1 min-h-0 overflow-y-auto">
         <table className="w-full border-collapse table-fixed h-full" style={{ fontSize: mFontSize }}>
           <thead>
             <tr className="text-center font-semibold uppercase text-white/90" style={{ fontSize: mHeaderSize, backgroundColor: "#3a3a3a", letterSpacing: "0.12em" }}>
               <th className="px-1 py-2 w-[14%]">Rank</th>
-              <th className="px-1 py-2 w-[36%] text-left">Person</th>
-              <th className="px-1 py-2 w-[25%] text-right">{data.currentQuarter}</th>
+              <th className="px-1 py-2 w-[36%] text-left">Person I/C</th>
+              <th className="px-1 py-2 w-[25%] text-right">Current Quarter</th>
               <th className="px-1 py-2 pr-3 w-[25%] text-right">Total</th>
             </tr>
             <tr><td colSpan={4} style={{ padding: 0, height: "2px", background: "linear-gradient(90deg, #d4a853, transparent)" }} /></tr>
           </thead>
           <tbody>
-            {ranked.map((row, idx) => {
-              const rank = idx + 1;
+            {displayed.map((row, idx) => {
+              const rank = currentPage * PAGE_SIZE + idx + 1;
               const color = rankColor(rank);
               return (
                 <tr
@@ -255,6 +346,17 @@ export default function SponsorshipLeaderboard() {
 
       <DashboardControls>
         <button onClick={() => load()} disabled={refreshing} className="px-4 py-2 rounded bg-black/40 text-white hover:bg-black/60 disabled:opacity-40 disabled:cursor-not-allowed">{refreshing ? "Refreshing..." : "↻ Refresh"}</button>
+        <button onClick={() => setPageIndex((p) => (p - 1 + totalPages) % totalPages)} disabled={totalPages <= 1} className="px-4 py-2 rounded bg-black/40 text-white hover:bg-black/60 disabled:opacity-30 disabled:cursor-not-allowed">◀ Prev</button>
+        <span className="text-sm text-white/80">{currentPage + 1} / {totalPages}</span>
+        <button onClick={() => setPageIndex((p) => (p + 1) % totalPages)} disabled={totalPages <= 1} className="px-4 py-2 rounded bg-black/40 text-white hover:bg-black/60 disabled:opacity-30 disabled:cursor-not-allowed">Next ▶</button>
+        <select value={rotationMs} onChange={(e) => setRotationMs(Number(e.target.value))} className="px-4 py-2 rounded bg-black/40 text-white hover:bg-black/60 [&>option]:bg-gray-800 [&>option]:text-white">
+          <option value="0">No rotate</option>
+          <option value="5000">5s</option>
+          <option value="10000">10s</option>
+          <option value="15000">15s</option>
+          <option value="30000">30s</option>
+          <option value="60000">60s</option>
+        </select>
         <span className="text-xs text-white/70">{data ? `Updated ${new Date(data.lastUpdated).toLocaleTimeString()}` : ""}</span>
         <button onClick={() => (window.location.href = "/dashboard/bizzcon")} className="px-4 py-2 rounded bg-black/40 text-white hover:bg-black/60">Events</button>
       </DashboardControls>
