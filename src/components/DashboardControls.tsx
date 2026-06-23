@@ -6,11 +6,17 @@ import { useRouter } from "next/navigation";
 interface DashboardControlsProps {
   children?: ReactNode;
   className?: string;
+  /** Hide the built-in Fullscreen button (e.g. pages with only a Home action). */
+  showFullscreen?: boolean;
+  /** When false, only the handle button opens the panel (no bottom-zone tap). */
+  openOnBottomTap?: boolean;
 }
 
 export default function DashboardControls({
   children,
   className = "",
+  showFullscreen = true,
+  openOnBottomTap = true,
 }: DashboardControlsProps) {
   const router = useRouter();
   const [visible, setVisible] = useState(false);
@@ -65,6 +71,7 @@ export default function DashboardControls({
   // on phones, where a tap fired touchstart AND a synthetic click — toggling
   // the overlay on then immediately off, so it never appeared.
   useEffect(() => {
+    if (!openOnBottomTap) return; // the handle button is the only way to open
     const onPointerDown = (e: PointerEvent) => {
       if (e.target instanceof Node && containerRef.current?.contains(e.target))
         return;
@@ -85,7 +92,7 @@ export default function DashboardControls({
     };
     window.addEventListener("pointerdown", onPointerDown);
     return () => window.removeEventListener("pointerdown", onPointerDown);
-  }, []);
+  }, [openOnBottomTap]);
 
   const toggleFullscreen = () => {
     if (!document.fullscreenElement) {
@@ -137,12 +144,14 @@ export default function DashboardControls({
           {children && (
             <span className="hidden h-8 w-px bg-white/40 sm:block" aria-hidden="true" />
           )}
-          <button
-            onClick={toggleFullscreen}
-            className="rounded-lg bg-black/40 px-5 py-3 text-lg text-white hover:bg-black/60 active:bg-black/70"
-          >
-            {isFullscreen ? "Exit ⛶" : "Fullscreen ⛶"}
-          </button>
+          {showFullscreen && (
+            <button
+              onClick={toggleFullscreen}
+              className="rounded-lg bg-black/40 px-5 py-3 text-lg text-white hover:bg-black/60 active:bg-black/70"
+            >
+              {isFullscreen ? "Exit ⛶" : "Fullscreen ⛶"}
+            </button>
+          )}
           <button
             onClick={() => router.push("/")}
             className="rounded-lg bg-black/40 px-5 py-3 text-lg text-white hover:bg-black/60 active:bg-black/70"

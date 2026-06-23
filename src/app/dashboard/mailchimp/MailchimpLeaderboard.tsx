@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { useRouter } from "next/navigation";
 import DashboardControls from "@/src/components/DashboardControls";
 import {
@@ -31,6 +31,13 @@ const ROTATION_OPTIONS = [
 
 const REFRESH_INTERVAL_MS = 30 * 60 * 1000;
 const TOP_LEAD_SOURCES = 3;
+
+// Short chip labels for phone portrait, where the long bucket names dominate the
+// narrow Audience column. Only the long ones are abbreviated; the rest pass through.
+const BUCKET_SHORT: Record<string, string> = {
+  "Newsletter sign-up": "Newsletter",
+  "Top banks / companies": "Top banks",
+};
 
 type Props = {
   audiences: MailchimpAudienceStats[];
@@ -121,18 +128,101 @@ export default function MailchimpLeaderboard({ audiences, engagement, movement }
     [audiences, engagement, movement.perAudience],
   );
 
-  const [pageSize, setPageSize] = useState<number>(() =>
-    typeof window !== "undefined" && window.innerWidth < 768 ? 4 : 6,
-  );
+  // Must be a constant for the initial render so SSR and the first client render
+  // agree (no hydration mismatch). Phone portrait ignores pageSize (it uses the
+  // phoneShowAll toggle below), so this is only the desktop/TV default.
+  const [pageSize, setPageSize] = useState(6);
+  // Phone portrait packs the same wide table into a narrow column, so the Audience
+  // cell (title + chips + error) wraps tall and used to overlap the next row.
+  // Track phone width to shrink the per-row detail and clip the cell (below).
+  const [isPhone, setIsPhone] = useState(false);
+  useEffect(() => {
+    // Portrait-only: a phone held in landscape must use the landscape (fit) layout,
+    // not the portrait scroll layout. Without the orientation clause a small/narrow
+    // landscape phone (or a browser that reports a sub-767px landscape width, which
+    // Chrome and Safari disagree on) would wrongly get the scrollable portrait grid.
+    const mq = window.matchMedia("(max-width: 767px) and (orientation: portrait)");
+    const apply = () => setIsPhone(mq.matches);
+    apply();
+    mq.addEventListener("change", apply);
+    return () => mq.removeEventListener("change", apply);
+  }, []);
+  // Landscape phones are wider than the 767px portrait breakpoint, so they fall
+  // through to the desktop table. Detect them (landscape + phone-width, excluding
+  // tablets/desktop ≥ 950px) to pin the table to the real visible height and size
+  // each Show-N page to fit — `h-screen`/`vh` resolve to the toolbar-hidden
+  // (taller) height on mobile, so a page's rows overran the short landscape view.
+  const [isLandscapePhone, setIsLandscapePhone] = useState(false);
+  useEffect(() => {
+    const mq = window.matchMedia("(orientation: landscape) and (max-width: 950px)");
+    const apply = () => setIsLandscapePhone(mq.matches);
+    apply();
+    mq.addEventListener("change", apply);
+    return () => mq.removeEventListener("change", apply);
+  }, []);
+  // Phone portrait offers only two layouts (the full Show-N control is desktop/TV
+  // only): "Show 10" sizes rows so ~10 fit and you scroll for the rest, "Show All"
+  // renders every brand at its natural height. Both scroll with the header, Total
+  // and Audience column frozen.
+  const [phoneShowAll, setPhoneShowAll] = useState(false);
   const [pageIndex, setPageIndex] = useState(0);
   const [rotationInterval, setRotationInterval] = useState(60_000);
   const rotationTimer = useRef<ReturnType<typeof setInterval> | null>(null);
   const touchStartX = useRef<number | null>(null);
 
-  const totalPages = Math.max(1, Math.ceil(rows.length / pageSize));
-  const displayed = rows.slice(pageIndex * pageSize, (pageIndex + 1) * pageSize);
+  // The real visible height (toolbar-aware) so phone portrait can be pinned to it
+  // and fit-to-screen — h-screen / vh resolve to the toolbar-hidden (taller)
+  // height on mobile, which made the page scroll. visualViewport.height is the
+  // true visible height; re-measure on the next frame + after a tick so it
+  // settles on a fresh navigation.
+  const [viewportH, setViewportH] = useState<number | null>(null);
+  useEffect(() => {
+    const vv = window.visualViewport;
+    const apply = () => setViewportH(Math.round(vv?.height ?? window.innerHeight));
+    apply();
+    const raf = requestAnimationFrame(apply);
+    const t = setTimeout(apply, 300);
+    window.addEventListener("resize", apply);
+    window.addEventListener("orientationchange", apply);
+    vv?.addEventListener("resize", apply);
+    vv?.addEventListener("scroll", apply);
+    return () => {
+      cancelAnimationFrame(raf);
+      clearTimeout(t);
+      window.removeEventListener("resize", apply);
+      window.removeEventListener("orientationchange", apply);
+      vv?.removeEventListener("resize", apply);
+      vv?.removeEventListener("scroll", apply);
+    };
+  }, []);
+
+  // Lock document scroll on phones so the fit-to-screen page can't be dragged.
+  useEffect(() => {
+    if (!isPhone && !isLandscapePhone) return;
+    window.scrollTo(0, 0);
+    const html = document.documentElement;
+    const { overflow: prevHtml } = html.style;
+    const { overflow: prevBody, overscrollBehavior: prevOverscroll } =
+      document.body.style;
+    html.style.overflow = "hidden";
+    document.body.style.overflow = "hidden";
+    document.body.style.overscrollBehavior = "none";
+    return () => {
+      html.style.overflow = prevHtml;
+      document.body.style.overflow = prevBody;
+      document.body.style.overscrollBehavior = prevOverscroll;
+    };
+  }, [isPhone, isLandscapePhone]);
+
+  // Phone portrait shows every brand in one vertically-scrollable list (frozen
+  // Audience column + pinned header/Total); desktop/TV keep the paged page-size
+  // control. `perPage` drives both pagination and the row sizing below.
+  const perPage = isPhone ? Math.max(rows.length, 1) : pageSize;
+
+  const totalPages = Math.max(1, Math.ceil(rows.length / perPage));
+  const displayed = rows.slice(pageIndex * perPage, (pageIndex + 1) * perPage);
   const padded: (CombinedRow | null)[] = [...displayed];
-  while (padded.length < pageSize) padded.push(null);
+  while (padded.length < perPage) padded.push(null);
 
   // Auto-rotate pages.
   useEffect(() => {
@@ -154,13 +244,88 @@ export default function MailchimpLeaderboard({ audiences, engagement, movement }
   }, [router]);
 
   // Viewport-scaled sizing — same clamp formula family as the editorial leaderboard.
-  const count = pageSize || 1;
+  const count = perPage || 1;
   const eff = Math.min(count + 1, 12);
   const rowHeightVh = 70 / (count + 1);
-  const fontSize = `clamp(0.8rem, min(calc(0.55vw + ${6 / eff}vw), ${rowHeightVh * 0.3}vh), 2.6rem)`;
-  const headerSize = `clamp(0.65rem, min(calc(0.35vw + ${4 / eff}vw), ${rowHeightVh * 0.18}vh), 1.4rem)`;
-  const chipSize = `clamp(0.6rem, min(calc(0.3vw + ${3 / eff}vw), ${rowHeightVh * 0.16}vh), 1.1rem)`;
-  const totalBigSize = `clamp(1rem, calc(0.6vw + ${7 / eff}vw), 2.6rem)`;
+  // Landscape phone keeps the desktop Show-N paging, but sizes the current page's
+  // rows + Total in px off the real visible height so they fit without scrolling
+  // (0.86 leaves room for the header row). count = pageSize here. Computed up here
+  // so the fonts can scale to it.
+  //
+  // `!isPhone` makes portrait win: a portrait-width phone (< 767px) must never take
+  // this landscape path. Dividing the TALL portrait viewport by a few rows yields
+  // huge fonts, and the orientation media query can get stuck "landscape" across
+  // rotations on mobile Safari — which would otherwise blow up the portrait layout.
+  const landscapeRowH =
+    isLandscapePhone && !isPhone && viewportH != null
+      ? Math.max(1, Math.round((viewportH * 0.86) / (count + 1)))
+      : null;
+  // Font sizing. Portrait phones use small rem clamps. Landscape phones scale every
+  // font to the fit row height (px) so a Show-N page's rows never grow past their
+  // slot and clip. Desktop/TV keep the original vh/vw clamps.
+  const fontSize =
+    landscapeRowH != null
+      ? `${Math.max(8, Math.round(landscapeRowH * 0.34))}px`
+      : isPhone
+        ? `clamp(0.5rem, min(calc(0.55vw + ${6 / eff}vw), ${rowHeightVh * 0.3}vh), 0.95rem)`
+        : `clamp(0.8rem, min(calc(0.55vw + ${6 / eff}vw), ${rowHeightVh * 0.3}vh), 2.6rem)`;
+  const headerSize =
+    landscapeRowH != null
+      ? `${Math.max(7, Math.round(landscapeRowH * 0.26))}px`
+      : isPhone
+        ? `clamp(0.45rem, min(calc(0.35vw + ${4 / eff}vw), ${rowHeightVh * 0.18}vh), 0.8rem)`
+        : `clamp(0.65rem, min(calc(0.35vw + ${4 / eff}vw), ${rowHeightVh * 0.18}vh), 1.4rem)`;
+  const chipSize =
+    landscapeRowH != null
+      ? `${Math.max(6, Math.round(landscapeRowH * 0.2))}px`
+      : isPhone
+        ? `clamp(0.42rem, min(calc(0.25vw + ${2.4 / eff}vw), ${rowHeightVh * 0.16}vh), 0.56rem)`
+        : `clamp(0.6rem, min(calc(0.3vw + ${3 / eff}vw), ${rowHeightVh * 0.16}vh), 1.1rem)`;
+  const totalBigSize =
+    landscapeRowH != null
+      ? `${Math.max(9, Math.round(landscapeRowH * 0.4))}px`
+      : isPhone
+        ? `clamp(0.7rem, calc(0.6vw + ${7 / eff}vw), 1.1rem)`
+        : `clamp(1rem, calc(0.6vw + ${7 / eff}vw), 2.6rem)`;
+  // Shrink the emphasized numeric cells (Subscribers / Net) on phones/landscape —
+  // at desktop they're enlarged, which on a small screen pushes them out of place.
+  const numEm = isPhone || isLandscapePhone ? "1em" : undefined;
+  // Hide the chips in landscape "Show All" — with every brand on one short page the
+  // rows are too thin to fit chips without spilling into each other. Every other
+  // view keeps the top lead-source chips.
+  const landscapeShowAll = isLandscapePhone && pageSize >= Math.max(rows.length, 1);
+  const chipsToShow = landscapeShowAll ? 0 : TOP_LEAD_SOURCES;
+  // Compact chip styling + abbreviations for the cramped mobile views. The title
+  // clamps to 2 lines in portrait, 1 line in (short) landscape, unclamped on desktop.
+  const compact = isPhone || isLandscapePhone;
+  const titleLines = isPhone ? 2 : isLandscapePhone ? 1 : 0;
+  // Phone "Show 10": size rows so ~10 fit the screen at once; every brand is still
+  // rendered, so the rest are reached by scrolling while the header + Total stay
+  // pinned (sticky cells in globals.css) and the Audience column stays frozen.
+  // Divide the real visible height (viewportH) by 11 = 10 rows + the Total. Phone
+  // "Show All" and desktop/TV fall through to natural/vh sizing.
+  const PHONE_VISIBLE_ROWS = 10;
+  const phoneRowH =
+    isPhone && !phoneShowAll && viewportH != null
+      ? Math.max(1, Math.round((viewportH * 0.9) / (PHONE_VISIBLE_ROWS + 1)))
+      : null;
+  const rowHeightCss =
+    phoneRowH != null
+      ? `${phoneRowH}px`
+      : isPhone
+        ? "auto"
+        : landscapeRowH != null
+          ? `${landscapeRowH}px`
+          : `${rowHeightVh}vh`;
+  const rowMinH =
+    phoneRowH != null
+      ? `${phoneRowH}px`
+      : landscapeRowH != null
+        ? `${landscapeRowH}px`
+        : undefined;
+  // In landscape, cap the Audience cell to its row so its content can't push the
+  // row taller and clip the rows below. Portrait scrolls, so it's uncapped there.
+  const cellMaxH = landscapeRowH != null ? `${landscapeRowH}px` : undefined;
 
   // Aggregate footer numbers.
   const okRows = rows.filter((r) => !r.error);
@@ -169,10 +334,20 @@ export default function MailchimpLeaderboard({ audiences, engagement, movement }
   const avgClick = avg(okRows.filter((r) => r.clickRate !== null).map((r) => r.clickRate!));
   const avgUnsubRate = avg(okRows.filter((r) => r.unsubRate !== null).map((r) => r.unsubRate!));
 
+  // Pin the page to the real visible height on any phone (portrait or landscape)
+  // so it's fit-to-screen instead of using the toolbar-hidden `h-screen`.
+  const pinViewport = (isPhone || isLandscapePhone) && viewportH != null;
+
   return (
     <div
-      className="flex flex-col h-screen overflow-hidden"
-      style={{ background: "#ffffff", color: MC_INK }}
+      className={`flex flex-col overflow-hidden ${
+        pinViewport ? "fixed inset-x-0 top-0" : "h-screen"
+      }`}
+      style={{
+        background: "#ffffff",
+        color: MC_INK,
+        ...(pinViewport ? { height: viewportH } : {}),
+      }}
       onTouchStart={(e) => {
         touchStartX.current = e.touches[0].clientX;
       }}
@@ -186,11 +361,18 @@ export default function MailchimpLeaderboard({ audiences, engagement, movement }
         touchStartX.current = null;
       }}
     >
-      {/* Single combined table */}
-      <div className="flex-1 min-h-0 px-0 md:px-6 flex flex-col">
+      {/* Single combined table. On phone portrait the Audience column stays frozen
+          (sticky-left) with the header + Total pinned (sticky top/bottom, see
+          globals.css), so the body scrolls both ways to reveal every brand and
+          every metric column. */}
+      <div
+        className={`flex-1 min-h-0 px-0 md:px-6 flex flex-col ${
+          isPhone ? "overflow-auto" : isLandscapePhone ? "overflow-hidden" : ""
+        }`}
+      >
         <table
-          className="w-full border-collapse table-fixed h-full"
-          style={{ fontSize }}
+          className="mc-table w-full border-collapse table-fixed h-full"
+          style={{ fontSize, ...(isPhone ? { minWidth: 680 } : {}) }}
         >
           <thead>
             <tr
@@ -202,7 +384,12 @@ export default function MailchimpLeaderboard({ audiences, engagement, movement }
                 letterSpacing: "0.10em",
               }}
             >
-              <th className="px-3 sm:px-4 py-3 w-[26%]">Audience</th>
+              <th
+                className="px-3 sm:px-4 py-3 w-[26%]"
+                style={isPhone ? { width: 128 } : undefined}
+              >
+                Audience
+              </th>
               <th className="px-2 py-3 w-[10%] text-right">Subscribers</th>
               <th className="px-2 py-3 w-[7%] text-right">Open</th>
               <th className="px-2 py-3 w-[7%] text-right">Click</th>
@@ -212,9 +399,11 @@ export default function MailchimpLeaderboard({ audiences, engagement, movement }
               <th className="px-2 py-3 w-[6%] text-right">− Cln</th>
               <th className="px-3 sm:px-4 py-3 w-[8%] text-right">Net</th>
             </tr>
-            <tr>
-              <td colSpan={9} style={{ padding: 0, height: 3, background: MC_YELLOW }} />
-            </tr>
+            {!isPhone && (
+              <tr>
+                <td colSpan={9} style={{ padding: 0, height: 3, background: MC_YELLOW }} />
+              </tr>
+            )}
           </thead>
           <tbody>
             {padded.map((row, idx) => (
@@ -222,15 +411,21 @@ export default function MailchimpLeaderboard({ audiences, engagement, movement }
                 key={row ? row.key : `empty-${idx}`}
                 row={row}
                 idx={idx}
-                rowHeightVh={rowHeightVh}
+                rowHeight={rowHeightCss}
+                rowMinH={rowMinH}
                 chipSize={chipSize}
+                compact={compact}
+                titleLines={titleLines}
+                chipsToShow={chipsToShow}
+                cellMaxH={cellMaxH}
+                numEm={numEm}
               />
             ))}
             {/* Footer total row */}
             <tr
               style={{
-                height: `${rowHeightVh}vh`,
-                minHeight: 50,
+                height: rowHeightCss,
+                minHeight: rowMinH ?? 50,
                 background: `linear-gradient(90deg, #ffffff, ${ALT_ROW_BG})`,
                 borderTop: `2px solid ${MC_YELLOW}`,
               }}
@@ -315,21 +510,49 @@ export default function MailchimpLeaderboard({ audiences, engagement, movement }
         >
           ◀ Prev
         </button>
-        <select
-          value={pageSize}
-          onChange={(e) => {
-            setPageSize(Number(e.target.value));
-            setPageIndex(0);
-          }}
-          className="px-4 py-2 rounded bg-black/40 text-white hover:bg-black/60 [&>option]:bg-gray-800 [&>option]:text-white"
-        >
-          {PAGE_OPTIONS.map((n) => (
-            <option key={n} value={n}>
-              Show {n}
-            </option>
-          ))}
-          <option value={Math.max(rows.length, 1)}>Show All ({rows.length})</option>
-        </select>
+        {isPhone ? (
+          <select
+            value={phoneShowAll ? "all" : "10"}
+            onChange={(e) => {
+              setPhoneShowAll(e.target.value === "all");
+              setPageIndex(0);
+            }}
+            className="px-4 py-2 rounded bg-black/40 text-white hover:bg-black/60 [&>option]:bg-gray-800 [&>option]:text-white"
+          >
+            <option value="10">Show 10</option>
+            <option value="all">Show All ({rows.length})</option>
+          </select>
+        ) : isLandscapePhone ? (
+          // Landscape phone: only the larger page sizes fit the short height.
+          <select
+            value={pageSize}
+            onChange={(e) => {
+              setPageSize(Number(e.target.value));
+              setPageIndex(0);
+            }}
+            className="px-4 py-2 rounded bg-black/40 text-white hover:bg-black/60 [&>option]:bg-gray-800 [&>option]:text-white"
+          >
+            <option value={6}>Show 6</option>
+            <option value={10}>Show 10</option>
+            <option value={Math.max(rows.length, 1)}>Show All ({rows.length})</option>
+          </select>
+        ) : (
+          <select
+            value={pageSize}
+            onChange={(e) => {
+              setPageSize(Number(e.target.value));
+              setPageIndex(0);
+            }}
+            className="px-4 py-2 rounded bg-black/40 text-white hover:bg-black/60 [&>option]:bg-gray-800 [&>option]:text-white"
+          >
+            {PAGE_OPTIONS.map((n) => (
+              <option key={n} value={n}>
+                Show {n}
+              </option>
+            ))}
+            <option value={Math.max(rows.length, 1)}>Show All ({rows.length})</option>
+          </select>
+        )}
         <span className="text-sm text-white/80">
           {Math.min(pageIndex + 1, totalPages)} / {totalPages}
         </span>
@@ -363,35 +586,61 @@ function signedFmt(n: number): string {
 function CombinedRowView({
   row,
   idx,
-  rowHeightVh,
+  rowHeight,
+  rowMinH,
   chipSize,
+  compact,
+  titleLines,
+  chipsToShow,
+  cellMaxH,
+  numEm,
 }: {
   row: CombinedRow | null;
   idx: number;
-  rowHeightVh: number;
+  rowHeight: string;
+  rowMinH: string | undefined;
   chipSize: string;
+  compact: boolean;
+  titleLines: number;
+  chipsToShow: number;
+  cellMaxH: string | undefined;
+  numEm: string | undefined;
 }) {
   const buckets = row
     ? LEAD_SOURCE_BUCKETS.map((b) => row.byBucket[b])
         .filter((b) => b.subscribed + b.unsubscribed + b.cleaned > 0)
         .sort((a, b) => b.subscribed - a.subscribed)
-        .slice(0, TOP_LEAD_SOURCES)
+        .slice(0, chipsToShow)
     : [];
   return (
     <tr
       style={{
-        height: `${rowHeightVh}vh`,
-        minHeight: 60,
+        height: rowHeight,
+        minHeight: rowMinH ?? 60,
         backgroundColor: idx % 2 === 0 ? "#ffffff" : ALT_ROW_BG,
         borderBottom: `1px solid ${ROW_BORDER}`,
       }}
     >
-      <td className="px-3 sm:px-4 py-2 align-middle">
+      <td className={`px-3 sm:px-4 py-2 ${compact ? "align-top" : "align-middle"}`}>
         {row && (
-          <div className="flex flex-col gap-1">
+          <div
+            className={`flex flex-col overflow-hidden ${compact ? "gap-0.5" : "gap-1"}`}
+            style={{ maxHeight: cellMaxH }}
+          >
             <span
               className="font-bold uppercase leading-tight"
-              style={{ color: MC_BLACK, letterSpacing: "0.04em" }}
+              style={{
+                color: MC_BLACK,
+                letterSpacing: "0.04em",
+                ...(titleLines > 0
+                  ? ({
+                      display: "-webkit-box",
+                      WebkitLineClamp: titleLines,
+                      WebkitBoxOrient: "vertical",
+                      overflow: "hidden",
+                    } as CSSProperties)
+                  : {}),
+              }}
               title={row.title}
             >
               {row.title}
@@ -401,19 +650,21 @@ function CombinedRowView({
                 {buckets.map((b) => (
                   <span
                     key={b.bucket}
-                    className="inline-flex items-baseline gap-1 uppercase font-semibold tracking-wider"
+                    className={`inline-flex items-baseline uppercase font-semibold ${
+                      compact ? "gap-0.5 tracking-normal" : "gap-1 tracking-wider"
+                    }`}
                     style={{
                       fontSize: chipSize,
                       background: CHIP_BG,
                       color: MC_BLACK,
                       border: `1px solid ${MC_YELLOW}`,
-                      padding: "1px 8px",
+                      padding: compact ? "0 3px" : "1px 8px",
                       borderRadius: 9999,
-                      lineHeight: 1.4,
+                      lineHeight: compact ? 1.15 : 1.4,
                     }}
                     title={`+${b.subscribed} · −${b.unsubscribed} unsubs · −${b.cleaned} cleaned`}
                   >
-                    <span>{b.bucket}</span>
+                    <span>{compact ? BUCKET_SHORT[b.bucket] ?? b.bucket : b.bucket}</span>
                     <span className="font-mono" style={{ color: MC_INK }}>
                       +{b.subscribed}
                     </span>
@@ -442,7 +693,7 @@ function CombinedRowView({
       </td>
       <td
         className="px-2 py-2 text-right font-mono font-bold align-middle tabular-nums"
-        style={{ color: MC_BLACK, fontSize: "1.2em" }}
+        style={{ color: MC_BLACK, fontSize: numEm ?? "1.2em" }}
       >
         {row ? (row.error ? "—" : fmt(row.members)) : ""}
       </td>
@@ -486,7 +737,7 @@ function CombinedRowView({
         className="px-3 sm:px-4 py-2 text-right font-mono font-bold align-middle tabular-nums"
         style={{
           color: row && row.windowNet < 0 ? MC_RED : MC_BLACK,
-          fontSize: "1.15em",
+          fontSize: numEm ?? "1.15em",
         }}
       >
         {row ? signedFmt(row.windowNet) : ""}

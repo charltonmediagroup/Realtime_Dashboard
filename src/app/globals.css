@@ -44,10 +44,83 @@ body {
   line-height: 1.15 !important;
 }
 
+/* Mailchimp leaderboard on phones: the dense 9-column table is too wide for a
+   narrow screen, so trim every cell's padding to give the numbers room and stop
+   adjacent-column content from colliding. Desktop/TV keep their roomy padding. */
+@media (max-width: 767px) and (orientation: portrait) {
+  .mc-table td,
+  .mc-table th {
+    padding-left: 2px !important;
+    padding-right: 2px !important;
+    padding-top: 2px !important;
+    padding-bottom: 2px !important;
+  }
+
+  /* Freeze the Audience column (sticky-left) and pin the header + Total rows so
+     the body scrolls vertically through every brand. Sticky cells need their own
+     opaque background since the scrolling metric columns slide underneath. The
+     :first-child corners (header/Total × Audience) sit above everything. */
+  .mc-table thead th {
+    position: sticky;
+    top: 0;
+    z-index: 3;
+    background: #000;
+    border-bottom: 3px solid #ffe01b;
+  }
+  .mc-table thead th:first-child {
+    left: 0;
+    z-index: 5;
+  }
+  .mc-table tbody td:first-child {
+    position: sticky;
+    left: 0;
+    z-index: 2;
+  }
+  .mc-table tbody tr:nth-child(odd) td:first-child {
+    background: #ffffff;
+  }
+  .mc-table tbody tr:nth-child(even) td:first-child {
+    background: #fafafa;
+  }
+  .mc-table tbody tr:last-child td {
+    position: sticky;
+    bottom: 0;
+    z-index: 3;
+    background: #fafafa;
+    border-top: 2px solid #ffe01b;
+  }
+  .mc-table tbody tr:last-child td:first-child {
+    left: 0;
+    z-index: 5;
+  }
+}
+
 /* Show desktop table in landscape on mobile */
 @media (orientation: landscape) {
   .landscape-show { display: flex !important; }
   .landscape-hide { display: none !important; }
+}
+
+/* Active-users table: stick the column labels while scrolling — mobile only (e.g.
+   landscape phones / small tablets). Desktop/TV (> 950px) are left untouched. */
+@media (max-width: 950px) {
+  .all-active-table thead th {
+    position: sticky;
+    top: 0;
+    background: #ffffff;
+    z-index: 1;
+  }
+}
+
+/* Mailchimp leaderboard on landscape phones: the short height leaves each Show-N
+   row very little room, so trim the cells' vertical padding (the JS already scales
+   the fonts to the row height). Tablets/desktop (>= 950px) keep roomy padding. */
+@media (orientation: landscape) and (max-width: 950px) {
+  .mc-table td,
+  .mc-table th {
+    padding-top: 2px !important;
+    padding-bottom: 2px !important;
+  }
 }
 
 /* Shrink the DashboardControls overlay on short landscape screens (phones) so all

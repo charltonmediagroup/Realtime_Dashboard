@@ -4,6 +4,7 @@ import React, { useEffect, useState } from "react";
 import BRAND_PROPERTIES_RAW from "@/data/brand_properties.json";
 import GROUPS_RAW from "@/data/groups.json";
 import Image from "next/image";
+import DashboardControls from "@/src/components/DashboardControls";
 
 type BrandStats = {
   now: number | null;
@@ -66,8 +67,14 @@ function getTableMode(): boolean {
   if (typeof window === "undefined") return true;
   const params = new URLSearchParams(window.location.search);
   const tableParam = params.get("table");
-  const isSmallScreen = window.innerWidth < 768;
-  return tableParam !== "0" && tableParam !== "false" && !isSmallScreen;
+  if (tableParam === "0" || tableParam === "false") return false;
+  // Landscape always uses the table view (matches Safari) regardless of width, so
+  // Chrome and Safari stay in sync in landscape. matchMedia (not window.innerWidth)
+  // is used because the two disagree across browsers — innerWidth includes the
+  // scrollbar / is affected by the visual viewport, which flipped Chrome to cards.
+  if (window.matchMedia("(orientation: landscape)").matches) return true;
+  // Portrait: cards on phones, table on wider screens.
+  return !window.matchMedia("(max-width: 767px)").matches;
 }
 
 // Get the main brand code for a group
@@ -188,10 +195,18 @@ export default function AllStatsPage() {
 
     const handleResize = () => setTableMode(getTableMode());
     window.addEventListener("resize", handleResize);
+    // Also listen on the breakpoint + orientation so the table/card switch fires
+    // reliably on rotation (matches how the leaderboards detect their layout).
+    const widthMq = window.matchMedia("(max-width: 767px)");
+    const orientationMq = window.matchMedia("(orientation: landscape)");
+    widthMq.addEventListener("change", handleResize);
+    orientationMq.addEventListener("change", handleResize);
 
     return () => {
       intervals.forEach(clearInterval);
       window.removeEventListener("resize", handleResize);
+      widthMq.removeEventListener("change", handleResize);
+      orientationMq.removeEventListener("change", handleResize);
     };
   }, []);
 
@@ -227,7 +242,7 @@ export default function AllStatsPage() {
 
   // -------------------- Render --------------------
   return (
-    <div className="bg-white text-gray-800 min-h-screen flex flex-col gap-2 items-center justify-evenly px-10 py-2 w-full">
+    <div className="bg-white text-gray-800 min-h-screen flex flex-col gap-2 items-center justify-evenly px-10 pt-2 pb-18 w-full">
       {loading ? (
         <p>Loading data...</p>
       ) : rows.length === 0 ? (
@@ -253,7 +268,7 @@ export default function AllStatsPage() {
           </div>
 
           {tableMode ? (
-            <table className="w-full border-collapse">
+            <table className="all-active-table w-full border-collapse">
               <thead>
                 <tr>
                   <th style={th}>Publication</th>
@@ -355,6 +370,8 @@ export default function AllStatsPage() {
           )}
         </>
       )}
+      {/* Floating control — only Home, opened by clicking the handle itself. */}
+      <DashboardControls showFullscreen={false} openOnBottomTap={false} />
     </div>
   );
 }
