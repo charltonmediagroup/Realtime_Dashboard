@@ -101,9 +101,11 @@ body {
   .landscape-hide { display: none !important; }
 }
 
-/* Active-users table: stick the column labels while scrolling — mobile only (e.g.
-   landscape phones / small tablets). Desktop/TV (> 950px) are left untouched. */
-@media (max-width: 950px) {
+/* Active-users table: stick the column labels while scrolling on touch devices
+   (phones + every iPad/tablet, in any orientation). Keyed on `pointer: coarse`
+   rather than a width cap so all iPad models behave identically; desktop/TV use a
+   fine pointer (mouse) and are left untouched — matching the app's touch split. */
+@media (pointer: coarse) {
   .all-active-table thead th {
     position: sticky;
     top: 0;

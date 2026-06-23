@@ -21,6 +21,8 @@ const ROW_BORDER = "#e5e5e5";
 const CHIP_BG = "#fff7c2";
 
 const PAGE_OPTIONS = [3, 4, 5, 6];
+// Tablets (iPads) have the height to fit more rows per page than desktop/TV want.
+const TABLET_PAGE_OPTIONS = [6, 8];
 const ROTATION_OPTIONS = [
   { label: "Pause", value: 0 },
   { label: "30 seconds", value: 30_000 },
@@ -160,6 +162,18 @@ export default function MailchimpLeaderboard({ audiences, engagement, movement }
     mq.addEventListener("change", apply);
     return () => mq.removeEventListener("change", apply);
   }, []);
+  // Tablets (iPads): touch + at least tablet width. They use the desktop layout but
+  // get a larger Show-N set since the taller screen fits more rows. `pointer: coarse`
+  // keeps desktop/TV (mouse) out; the phone checks above take precedence so a
+  // landscape phone never lands here.
+  const [isTablet, setIsTablet] = useState(false);
+  useEffect(() => {
+    const mq = window.matchMedia("(pointer: coarse) and (min-width: 768px)");
+    const apply = () => setIsTablet(mq.matches);
+    apply();
+    mq.addEventListener("change", apply);
+    return () => mq.removeEventListener("change", apply);
+  }, []);
   // Phone portrait offers only two layouts (the full Show-N control is desktop/TV
   // only): "Show 10" sizes rows so ~10 fit and you scroll for the rest, "Show All"
   // renders every brand at its natural height. Both scroll with the header, Total
@@ -196,9 +210,9 @@ export default function MailchimpLeaderboard({ audiences, engagement, movement }
     };
   }, []);
 
-  // Lock document scroll on phones so the fit-to-screen page can't be dragged.
+  // Lock document scroll on phones/tablets so the fit-to-screen page can't be dragged.
   useEffect(() => {
-    if (!isPhone && !isLandscapePhone) return;
+    if (!isPhone && !isLandscapePhone && !isTablet) return;
     window.scrollTo(0, 0);
     const html = document.documentElement;
     const { overflow: prevHtml } = html.style;
@@ -212,7 +226,7 @@ export default function MailchimpLeaderboard({ audiences, engagement, movement }
       document.body.style.overflow = prevBody;
       document.body.style.overscrollBehavior = prevOverscroll;
     };
-  }, [isPhone, isLandscapePhone]);
+  }, [isPhone, isLandscapePhone, isTablet]);
 
   // Phone portrait shows every brand in one vertically-scrollable list (frozen
   // Audience column + pinned header/Total); desktop/TV keep the paged page-size
@@ -260,6 +274,15 @@ export default function MailchimpLeaderboard({ audiences, engagement, movement }
     isLandscapePhone && !isPhone && viewportH != null
       ? Math.max(1, Math.round((viewportH * 0.86) / (count + 1)))
       : null;
+  // Tablets use the desktop layout, but `h-screen` (100vh) resolves to the
+  // toolbar-hidden (taller) viewport on iPad Safari, so the bottom of the table
+  // (the Total) ran past the visible area and its text clipped. Pin tablets to the
+  // real visible height and size every row in px off it so the page — Total
+  // included — always fits. count = pageSize (or all on Show All).
+  const tabletRowH =
+    isTablet && !isLandscapePhone && viewportH != null
+      ? Math.max(1, Math.round((viewportH * 0.9) / (count + 1)))
+      : null;
   // Font sizing. Portrait phones use small rem clamps. Landscape phones scale every
   // font to the fit row height (px) so a Show-N page's rows never grow past their
   // slot and clip. Desktop/TV keep the original vh/vw clamps.
@@ -290,15 +313,18 @@ export default function MailchimpLeaderboard({ audiences, engagement, movement }
   // Shrink the emphasized numeric cells (Subscribers / Net) on phones/landscape —
   // at desktop they're enlarged, which on a small screen pushes them out of place.
   const numEm = isPhone || isLandscapePhone ? "1em" : undefined;
-  // Hide the chips in landscape "Show All" — with every brand on one short page the
-  // rows are too thin to fit chips without spilling into each other. Every other
-  // view keeps the top lead-source chips.
+  // "Show All" with every brand on one screen leaves rows too thin to fit chips.
+  // Landscape phone and tablet (desktop layout, no scroll) both hit this, so hide
+  // the chips and clamp the name to one line there so rows can shrink to fit.
   const landscapeShowAll = isLandscapePhone && pageSize >= Math.max(rows.length, 1);
-  const chipsToShow = landscapeShowAll ? 0 : TOP_LEAD_SOURCES;
+  const tabletShowAll =
+    isTablet && !isLandscapePhone && pageSize >= Math.max(rows.length, 1);
+  const chipsToShow = landscapeShowAll || tabletShowAll ? 0 : TOP_LEAD_SOURCES;
   // Compact chip styling + abbreviations for the cramped mobile views. The title
-  // clamps to 2 lines in portrait, 1 line in (short) landscape, unclamped on desktop.
+  // clamps to 2 lines in portrait, 1 line in (short) landscape / tablet Show All,
+  // unclamped on desktop/TV and tablet at fixed page sizes.
   const compact = isPhone || isLandscapePhone;
-  const titleLines = isPhone ? 2 : isLandscapePhone ? 1 : 0;
+  const titleLines = isPhone ? 2 : isLandscapePhone || tabletShowAll ? 1 : 0;
   // Phone "Show 10": size rows so ~10 fit the screen at once; every brand is still
   // rendered, so the rest are reached by scrolling while the header + Total stay
   // pinned (sticky cells in globals.css) and the Audience column stays frozen.
@@ -316,16 +342,26 @@ export default function MailchimpLeaderboard({ audiences, engagement, movement }
         ? "auto"
         : landscapeRowH != null
           ? `${landscapeRowH}px`
-          : `${rowHeightVh}vh`;
+          : tabletRowH != null
+            ? `${tabletRowH}px`
+            : `${rowHeightVh}vh`;
   const rowMinH =
     phoneRowH != null
       ? `${phoneRowH}px`
       : landscapeRowH != null
         ? `${landscapeRowH}px`
+        : tabletRowH != null
+          ? `${tabletRowH}px`
+          : undefined;
+  // Cap the Audience cell to its row so its content (name + chips) can't push the
+  // row taller and clip the rows below / the Total. Applies to landscape and all
+  // tablet sizes (both pinned/fit layouts). Portrait scrolls, so it's uncapped there.
+  const cellMaxH =
+    landscapeRowH != null
+      ? `${landscapeRowH}px`
+      : tabletRowH != null
+        ? `${tabletRowH}px`
         : undefined;
-  // In landscape, cap the Audience cell to its row so its content can't push the
-  // row taller and clip the rows below. Portrait scrolls, so it's uncapped there.
-  const cellMaxH = landscapeRowH != null ? `${landscapeRowH}px` : undefined;
 
   // Aggregate footer numbers.
   const okRows = rows.filter((r) => !r.error);
@@ -336,7 +372,7 @@ export default function MailchimpLeaderboard({ audiences, engagement, movement }
 
   // Pin the page to the real visible height on any phone (portrait or landscape)
   // so it's fit-to-screen instead of using the toolbar-hidden `h-screen`.
-  const pinViewport = (isPhone || isLandscapePhone) && viewportH != null;
+  const pinViewport = (isPhone || isLandscapePhone || isTablet) && viewportH != null;
 
   return (
     <div
@@ -367,7 +403,11 @@ export default function MailchimpLeaderboard({ audiences, engagement, movement }
           every metric column. */}
       <div
         className={`flex-1 min-h-0 px-0 md:px-6 flex flex-col ${
-          isPhone ? "overflow-auto" : isLandscapePhone ? "overflow-hidden" : ""
+          isPhone
+            ? "overflow-auto"
+            : isLandscapePhone || isTablet
+              ? "overflow-hidden"
+              : ""
         }`}
       >
         <table
@@ -534,6 +574,23 @@ export default function MailchimpLeaderboard({ audiences, engagement, movement }
           >
             <option value={6}>Show 6</option>
             <option value={10}>Show 10</option>
+            <option value={Math.max(rows.length, 1)}>Show All ({rows.length})</option>
+          </select>
+        ) : isTablet ? (
+          // Tablet (iPad): larger page sizes since the screen fits more rows.
+          <select
+            value={pageSize}
+            onChange={(e) => {
+              setPageSize(Number(e.target.value));
+              setPageIndex(0);
+            }}
+            className="px-4 py-2 rounded bg-black/40 text-white hover:bg-black/60 [&>option]:bg-gray-800 [&>option]:text-white"
+          >
+            {TABLET_PAGE_OPTIONS.map((n) => (
+              <option key={n} value={n}>
+                Show {n}
+              </option>
+            ))}
             <option value={Math.max(rows.length, 1)}>Show All ({rows.length})</option>
           </select>
         ) : (

@@ -60,6 +60,19 @@ export default function AwardsLeaderboard() {
     mq.addEventListener("change", apply);
     return () => mq.removeEventListener("change", apply);
   }, []);
+  // Tablets (iPads) render the desktop table but are too short to fit every row in
+  // "All", so they need the same scroll + sticky header/Total as landscape phones
+  // (otherwise the rows hit the 40px floor, overflow the root and clip the bottom +
+  // Total). `pointer: coarse` keeps desktop/TV (mouse) out; the phone breakpoints
+  // above don't match tablets, so this is iPads specifically.
+  const [isTablet, setIsTablet] = useState(false);
+  useEffect(() => {
+    const mq = window.matchMedia("(pointer: coarse) and (min-width: 768px)");
+    const apply = () => setIsTablet(mq.matches);
+    apply();
+    mq.addEventListener("change", apply);
+    return () => mq.removeEventListener("change", apply);
+  }, []);
   // CSS dvh/svh disagree across Safari and Chrome in landscape (toolbar height),
   // so the bottom row clips in one or the other. window.innerHeight is the true
   // visible height in BOTH, so pin the root to it (in px) on landscape phones.
@@ -142,11 +155,6 @@ export default function AwardsLeaderboard() {
   const effectivePageSize = pageSize === "all" ? Math.max(1, entryCount) : pageSize;
   const totalPagesForRotation = Math.max(1, Math.ceil(entryCount / effectivePageSize));
   useEffect(() => { setPageIndex(0); }, [pageSize]);
-  // 20/page can't fit a landscape phone, so fall back to 10 if we rotate into
-  // landscape while it's selected (the option is also hidden there).
-  useEffect(() => {
-    if (isLandscapePhone && pageSize === 20) setPageSize(10);
-  }, [isLandscapePhone, pageSize]);
   useEffect(() => {
     if (totalPagesForRotation <= 1 || rotationMs <= 0) return;
     const id = setInterval(() => {
@@ -201,9 +209,13 @@ export default function AwardsLeaderboard() {
   // Total frozen (sticky) above/below the scrolling body. Row height is a fixed
   // slice of the visible height so ~15 fit (15 rows + header + total ≈ 17 slots);
   // fonts track that height.
-  const allScroll = isLandscapePhone && pageSize === "all";
-  const allRowH = viewportH != null ? Math.max(18, Math.round(viewportH / 17)) : 26;
-  const allFont = Math.max(9, Math.min(15, Math.round(allRowH * 0.52)));
+  const allScroll = (isLandscapePhone || isTablet) && pageSize === "all";
+  // Slice the visible height into ~17 rows, but cap row height so a tall tablet
+  // shows more compact rows instead of ~15 oversized ones. The caps sit above what
+  // landscape phones compute, so phones are unchanged.
+  const allRowH =
+    viewportH != null ? Math.max(18, Math.min(46, Math.round(viewportH / 17))) : 26;
+  const allFont = Math.max(9, Math.min(18, Math.round(allRowH * 0.52)));
   const allHeadFont = Math.max(8, Math.round(allFont * 0.85));
   // Portrait 20/page: let the mobile rows shrink below the 40px floor so all 20 +
   // the total fit, and make the column scrollable as a fallback on short phones.
@@ -411,7 +423,6 @@ export default function AwardsLeaderboard() {
         <button onClick={() => setPageIndex((p) => (p - 1 + totalPages) % totalPages)} disabled={totalPages <= 1} className="px-4 py-2 rounded bg-black/40 text-white hover:bg-black/60 disabled:opacity-30 disabled:cursor-not-allowed">◀ Prev</button>
         <select value={pageSize === "all" ? "all" : String(pageSize)} onChange={(e) => setPageSize(e.target.value === "all" ? "all" : Number(e.target.value))} className="px-4 py-2 rounded bg-black/40 text-white hover:bg-black/60 [&>option]:bg-gray-800 [&>option]:text-white">
           <option value="10">10 / page</option>
-          {!isLandscapePhone && <option value="20">20 / page</option>}
           <option value="all">All</option>
         </select>
         <span className="text-sm text-white/80">{currentPage + 1} / {totalPages}</span>

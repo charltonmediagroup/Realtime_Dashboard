@@ -160,6 +160,18 @@ export default function EditorialLeaderboard({
     mq.addEventListener("change", apply);
     return () => mq.removeEventListener("change", apply);
   }, []);
+  // Tablets (iPads) render the desktop table. On "Show All" they're too short to
+  // fit every journalist at the 60px row floor, so the bottom + Total clip. Detect
+  // tablets (touch + ≥768px, excludes phones/mouse desktop/TV) to apply the same
+  // shrink-to-fit treatment landscape phones use, but only on Show All.
+  const [isTablet, setIsTablet] = useState(false);
+  useEffect(() => {
+    const mq = window.matchMedia("(pointer: coarse) and (min-width: 768px)");
+    const apply = () => setIsTablet(mq.matches);
+    apply();
+    mq.addEventListener("change", apply);
+    return () => mq.removeEventListener("change", apply);
+  }, []);
   const rotationTimer = useRef<NodeJS.Timeout | null>(null);
   const touchStartX = useRef<number | null>(null);
 
@@ -223,25 +235,31 @@ export default function EditorialLeaderboard({
   const count = pageSize || 1;
   const effectiveCount = Math.min(count + 1, 12); // +1 for total row
   const rowHeightVh = 78 / (count + 1);
+  // "Show All" selected (its option value is authors.length). On a tablet this is
+  // the case that overflows the 60px floor, so treat tablet+All like a landscape
+  // phone (shrink rows + trim detail) so everything fits without clipping. Desktop/
+  // TV (mouse) and tablet non-All keep their normal layout.
+  const isAllMode = pageSize >= Math.max(authors.length, 1);
+  const compact = isLandscapePhone || (isTablet && isAllMode);
   // On a landscape phone, give the total row a slim fixed slice so the journalist
   // rows (which carry the stories) get more height and stop clipping.
   const totalRowVh = isLandscapePhone ? 9 : rowHeightVh;
   const journalistRowVh = isLandscapePhone ? (78 - totalRowVh) / count : rowHeightVh;
   // Adaptive detail: fewer top stories as rows get shorter (more journalists),
   // so each row's line count tracks the height available to it.
-  // Landscape phone shrinks detail as rows get shorter; desktop/TV keeps 3.
-  const storiesToShow = isLandscapePhone
+  // Compact (landscape phone or tablet All) shrinks detail; desktop/TV keeps 3.
+  const storiesToShow = compact
     ? (count <= 3 ? 3 : count <= 5 ? 2 : count <= 9 ? 1 : 0)
     : 3;
-  // Cap how many brand tags render under a name (landscape phone only — desktop
-  // shows them all). Show 3 → up to 8 small tags; 4 → 4; 5 → 3; 6/7 → 1 inline
-  // beside the article count; Show All → 0. The rest fold into a tappable "+N".
-  const maxChips = isLandscapePhone
+  // Cap how many brand tags render under a name (compact only — desktop shows them
+  // all). Show 3 → up to 8 small tags; 4 → 4; 5 → 3; 6/7 → 1 inline beside the
+  // article count; Show All → 0. The rest fold into a tappable "+N".
+  const maxChips = compact
     ? (count <= 3 ? 4 : count === 4 ? 3 : count === 5 ? 2 : 0)
     : 999;
-  // Show 6/7/All on a landscape phone: put the tag(s) beside the article count
-  // (inline) instead of on their own line under the name.
-  const tagsInline = isLandscapePhone && maxChips <= 1;
+  // Show 6/7/All compact: put the tag(s) beside the article count (inline) instead
+  // of on their own line under the name.
+  const tagsInline = compact && maxChips <= 1;
   // Per-row line budgets — desktop puts the stories in their own cell (vs the
   // name+chips cell); mobile stacks name/chips + stories in one cell. Fonts are
   // capped at a fraction of the budget so content fits the row at any page size.
@@ -382,7 +400,7 @@ export default function EditorialLeaderboard({
                   key={a ? a.authorName : `empty-${idx}`}
                   style={{
                     height: `${journalistRowVh}dvh`,
-                    minHeight: isLandscapePhone ? "0px" : "60px",
+                    minHeight: compact ? "0px" : "60px",
                     backgroundColor: idx % 2 === 0 ? "#ffffff" : ALT_ROW_BG,
                     borderBottom: `1px solid ${ROW_BORDER}`,
                   }}
@@ -526,7 +544,7 @@ export default function EditorialLeaderboard({
             <tr
               style={{
                 height: `${totalRowVh}dvh`,
-                minHeight: isLandscapePhone ? "0px" : "50px",
+                minHeight: compact ? "0px" : "50px",
                 background: `linear-gradient(90deg, #ffffff, ${ALT_ROW_BG})`,
                 borderTop: `2px solid ${BRAND_RED}`,
               }}
