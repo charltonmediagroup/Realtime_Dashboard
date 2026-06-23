@@ -8,7 +8,9 @@ interface DashboardControlsProps {
   className?: string;
   /** Hide the built-in Fullscreen button (e.g. pages with only a Home action). */
   showFullscreen?: boolean;
-  /** When false, only the handle button opens the panel (no bottom-zone tap). */
+  /** When false, touch users open the panel only via the handle button (no
+   *  bottom-zone tap). Desktop/non-touch always keeps the bottom-zone toggle so
+   *  it behaves like every other page. */
   openOnBottomTap?: boolean;
 }
 
@@ -71,7 +73,6 @@ export default function DashboardControls({
   // on phones, where a tap fired touchstart AND a synthetic click — toggling
   // the overlay on then immediately off, so it never appeared.
   useEffect(() => {
-    if (!openOnBottomTap) return; // the handle button is the only way to open
     const onPointerDown = (e: PointerEvent) => {
       if (e.target instanceof Node && containerRef.current?.contains(e.target))
         return;
@@ -84,9 +85,11 @@ export default function DashboardControls({
         : Math.max(window.innerHeight * 0.25, 140);
       if (e.clientY < window.innerHeight - zone) return;
       if (isTouchRef.current) {
-        // Touch: the bottom-tap only opens; the backdrop handles closing.
-        if (!visibleRef.current) setVisible(true);
+        // Touch: the bottom-tap only opens; the backdrop handles closing. Pages
+        // can opt out (openOnBottomTap=false) to require the handle button.
+        if (openOnBottomTap && !visibleRef.current) setVisible(true);
       } else {
+        // Desktop/TV always toggles via the bottom zone, like every other page.
         setVisible((v) => !v);
       }
     };
