@@ -236,3 +236,24 @@ body {
     -webkit-line-clamp: 1 !important;
   }
 }
+
+/* Brand-dashboard header on tablets (iPads): the desktop md: logo sizes (brand
+   w-64, corner CMG w-32) are too wide for the iPad header row, so the upper-right
+   CMG logo overlaps the "Active Users Now" metric. Shrink both logos to give the
+   metrics room. Touch + tablet size only (min-height 700 excludes short landscape
+   phones; pointer: coarse excludes mouse-driven desktop/TV). */
+@media (pointer: coarse) and (min-width: 768px) and (min-height: 700px) {
+  .brand-header .brand-logo { height: 3rem !important; width: 8rem !important; }
+  .brand-header .cmg-logo { height: 3rem !important; width: 5rem !important; }
+
+  /* Editorial brand dashboard: give the video a bit more room and shrink the
+     Top-10 news column + its title font so more of each headline is visible.
+     Scoped to the news that holds a table (TopViews) so the Awards dashboard's
+     countdown column — which reuses .brand-news/.brand-video — is left alone. */
+  .brand-content:has(.brand-news table) { gap: 1rem !important; }
+  .brand-content:has(.brand-news table) .brand-news { width: 34% !important; }
+  .brand-content:has(.brand-news table) .brand-video { width: 66% !important; }
+  .brand-news table { font-size: clamp(12px, 1.6vh, 16px) !important; }
+  .brand-news th { padding: 6px 10px !important; }
+  .brand-news td { padding: 2px 10px !important; }
+}
